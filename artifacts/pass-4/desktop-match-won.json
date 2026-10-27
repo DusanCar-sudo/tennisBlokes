@@ -1,0 +1,138 @@
+{
+  "url": "http://127.0.0.1:4173/",
+  "mode": "desktop",
+  "state": "match-won",
+  "requestedState": "match-won",
+  "appliedState": "match-won",
+  "runId": "pass-4",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass-4/desktop-match-won.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 1280,
+      "height": 720
+    },
+    "drawingBuffer": {
+      "width": 1280,
+      "height": 720
+    },
+    "alphaPixels": 4096,
+    "variance": 254,
+    "colorBuckets": 68,
+    "metrics": {
+      "colorBuckets": 101,
+      "colorEntropyBits": 3.32,
+      "edgeDensity": 0.066,
+      "luminance": {
+        "mean": 28.5,
+        "p5": 10.5,
+        "p95": 51.5,
+        "contrast": 41
+      },
+      "dominantColorShare": 0.256,
+      "nonBackgroundShare": 0.744
+    },
+    "renderBudget": {
+      "tier": "desktop",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 211,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "triangles",
+          "actual": 216500,
+          "limit": 750000,
+          "ok": true
+        },
+        {
+          "metric": "geometries",
+          "actual": 194,
+          "limit": 300,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 20,
+          "limit": 60,
+          "ok": true
+        }
+      ],
+      "withinBudget": true
+    },
+    "diagnostics": {
+      "frame": 5,
+      "phase": "over",
+      "paused": false,
+      "screenshotPaused": true,
+      "mobile": false,
+      "score": {
+        "player": 4,
+        "rival": 2,
+        "playerLabel": "40",
+        "rivalLabel": "30",
+        "meta": "RACE TO 4"
+      },
+      "rally": 5,
+      "longestRally": 11,
+      "matchWinner": "player",
+      "matchPoint": false,
+      "ball": {
+        "mode": "flight",
+        "position": [
+          -1.55,
+          1.35,
+          8.38
+        ],
+        "speed": 6.2
+      },
+      "player": {
+        "position": [
+          -0.55,
+          0,
+          10.15
+        ]
+      },
+      "rival": {
+        "position": [
+          1.25,
+          0,
+          -9.6
+        ]
+      },
+      "camera": {
+        "position": [
+          -0.26,
+          2.02,
+          14.39
+        ],
+        "fov": 63
+      },
+      "renderer": {
+        "calls": 211,
+        "triangles": 216500,
+        "points": 610,
+        "lines": 109,
+        "geometries": 194,
+        "textures": 20
+      },
+      "autoShotEnabled": true
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}

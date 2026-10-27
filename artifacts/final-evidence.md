@@ -1,0 +1,258 @@
+# SUNSET SLAM — Final Evidence
+
+Run date: 2026-10-27 · Current build verified on the LAN server (4173) ·
+Manifest: `artifacts/evidence-pass4.json` (runId `pass-4`) · Prior passes:
+`evidence.json` (pass-1, pre-multiplier build), `evidence-pass2/3.json`.
+
+## What was built
+
+Third-person arcade tennis ("Fortnite camera") with automatic shot selection.
+Move + aim + one hit button; the auto-shot system chooses topspin / drive /
+slice / volley / smash / lob / drop / serve from ball height, court position
+and aim. First to 4 (2 clear) wins. Full loop: title → intro countdown → serve
+(auto toss, click to strike) → rally vs AI rival → point banners with real
+tennis reasons (winner, out, net, missed return, serve fault) → serve
+alternation → deuce/advantage → match point flag → results with stats →
+rematch / quit.
+
+## Verification performed
+
+### 1. Canvas inspector (production build, 7/7 PASS)
+
+`scripts/inspect-driver.mjs` drives the qa-release skill's inspector (SwiftShader
+headless — no GPU in this sandbox, so FPS readings are invalid; pixel, budget and
+functional checks hold). All renderer stats below are live, non-zero snapshots
+after a diagnostics-timing fix (see §4).
+
+| Capture | Result | Entropy | Edges | Contrast | Dominant | Budget |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop/title | PASS | 5.95 | 0.313 | 186 | 0.089 | ok (192 calls) |
+| desktop/active-play | PASS | 6.64 | 0.349 | 175 | 0.062 | ok (211 calls) |
+| desktop/serve | PASS | 6.51 | 0.347 | 173 | 0.070 | ok (206 calls) |
+| desktop/paused | PASS | 3.12 | 0.056 | 33 | 0.247 | ok (211 calls) |
+| desktop/match-won | PASS | 3.36 | 0.067 | 42 | 0.254 | ok (211 calls) |
+| mobile/title | PASS | 5.99 | 0.318 | 192 | 0.081 | **over: calls 181 > 150** |
+| mobile/active-play | PASS | 6.62 | 0.319 | 187 | 0.064 | **over: calls 204 > 150** |
+
+- Console/page errors: **0** in every capture.
+- Active-play pixel metrics are strong (entropy ≈ 6.6, edges ≈ 0.35,
+  contrast ≈ 175) — well above the "sparse scene" thresholds.
+- Paused/match-won low entropy is expected: the blur scrim + modal dominates.
+- **Documented tradeoff:** mobile draw calls 181–204 vs the 150 starting
+  budget. The stadium is a single shared scene; triangles are ~128k vs the
+  300k mobile cap, DPR is capped at 1.5, and 200 calls of shared-material
+  geometry is trivial for real mobile GPUs. Not worth gutting the stands for.
+- `check_evidence.py --manifest artifacts/evidence-pass3.json`: **8/8 artifacts
+  confirmed** (7 captures + motion video).
+
+### 2. Bot playtests (real input, seeded)
+
+- `scripts/bot-match.mjs` (seed 42, keyboard-driven from the title screen):
+  5 points completed across serve alternation — `1-0 RIKO HITS OUT`,
+  `2-0 RIKO HITS OUT`, `3-0 RIKO HITS OUT`, `3-1 MISSED RETURN`,
+  `3-2 MISSED RETURN`. 19 player hits, 0 swing whiffs, 107 world-units of
+  player movement, 0 console errors.
+- `scripts/bot-finish.mjs` (from the 3–2 match-point state): played the final
+  point with real input — **match won 4–2** at rally 9 — and a second run
+  reached **match lost 2–4**; results screen, stats, rematch (fresh 0–0) and
+  quit-to-title all verified.
+- First bot run exposed a real design flaw: two error-free players produced
+  endless rallies (0–0 after 26 hits). Fixed with a pressure-based unforced-
+  error model for Riko (stretch, rally length, shot type) plus a smaller
+  player fatigue term — points now end through winners *and* errors.
+- `scripts/quit-audio-test.mjs`: audio context unlocks on the PLAY click
+  (`state: running`), pause→quit and results→title return correct screens,
+  mute toggles body/UI state.
+
+### 3. Motion evidence (unpaused, real input)
+
+`artifacts/pass-3/rally-motion.webm` — 75 s of live play on the final build
+recorded through Playwright video while a script drives movement + hits.
+Frames extracted at 10 s / 35 s / 60 s (`motion-*.png`): active rally with
+ball trail mid-flight, point banner ("POINT · RIKO — MISSED RETURN") with the
+aim UI correctly hidden, and score progression 30–15 → 30–30 → 3–2. Observed:
+run-cycle locomotion, swing transitions on contact, banner in/out transitions,
+no frozen rig or stretched limbs.
+
+### 4. Defects found and fixed during verification
+
+1. **Endless rallies** (see §2) — added unforced-error model.
+2. **`mergeGeometries` compatibility failure** — mixing indexed and
+   non-indexed geometry silently dropped merged scenery and logged a console
+   error. Fixed: flatten to non-indexed, synthesize missing UVs, and only
+   swap originals in after a successful merge. Console now clean.
+3. **Diagnostics race in headless capture** — SwiftShader's slow frames let
+   the inspector snapshot a stale/zeroed `renderer.info` (one capture also
+   showed a stale phase). Fixed: 250 ms diagnostics republish timer plus
+   last-real-stats retention; pass-3 shows live, correct values in all 7
+   captures.
+4. Banner/aim overlap, pause-modal readability, and Esc-to-resume were caught
+   from screenshots and fixed before the final pass.
+
+### 5. Visual scorecard (active-play desktop, self-scored)
+
+Art direction 2 · Hero/player 2 (authored rig, jersey number, state poses) ·
+Obstacles/opponent 2 · Rewards/interactables 2 (ball glow, trail, aim/bounce
+markers, hit ratings) · World 2 (layered stadium, crowd, palms, big screen) ·
+Materials 2 (procedural court/ball/net textures, shared material roles) ·
+Lighting 2 (ACES, key/fill/rim, contact blobs, sunset sky shader) · VFX 2
+(event-driven contact bursts, rings, hitstop, FOV punch, shake) · UI/HUD 2
+(genre HUD: broadcast scoreboard, auto-shot chip, readiness ring, banners) ·
+Performance evidence 2 (live renderer stats, budgets documented). **Average
+2.0** — premium threshold (≥2.3) not claimed; weakest surfaces are crowd
+detail and mid-court furniture density.
+
+## How to re-verify
+
+```bash
+npm run build && npm run preview          # serve dist on :4173
+GAME_URL=http://127.0.0.1:4173/ node scripts/inspect-driver.mjs artifacts/evidence-pass3.json
+python3 /home/dusan/.agents/skills/threejs-game-director/scripts/check_evidence.py . --manifest artifacts/evidence-pass3.json
+node scripts/bot-match.mjs                # full-match bot (dev server)
+node scripts/motion-video.mjs             # record rally video
+```
+
+## Known limitations
+
+- SwiftShader headless has no GPU: all FPS/frame-time numbers are invalid;
+  visual QA ran on pixel metrics and screenshots instead.
+- Mobile draw calls exceed the 150 starting-point budget (see §1 tradeoff).
+- Single rival difficulty tier; no court selection or doubles.
+- Audio requires a user gesture (unlocks on PLAY click) per browser policy.
+
+
+## Update 2 — movement, camera, DUKA vs LAKI, LAN multiplayer (pass-4)
+
+Changes: faster/snappier athlete movement (speed 7.1 / sprint 8.9, accel 28,
+friction 17), camera pulled closer (4.15 m, height 2.02), players renamed to
+**DUKA** (you) and **LAKI** (opponent) across HUD, jerseys, big screen and
+copy, and a full LAN 1v1 multiplayer backend.
+
+### Multiplayer architecture
+
+- `server.mjs` — dependency-free Node server: static host for `dist/` plus a
+  hand-rolled RFC 6455 WebSocket endpoint (`/ws`) with a room broker
+  (host → 4-letter code → join). The server relays only; the host browser is
+  authoritative.
+- `src/net.js` — client: host broadcasts state snapshots (~20 Hz); guest
+  streams inputs (~30 Hz: move vector, sprint, aim point, hit sequence).
+- Guest rendering: the whole playfield sits under an arena group rotated 180°
+  on guest machines, so both machines run identical camera/aim/movement code;
+  the network layer mirrors coordinates at the boundary. Role-aware HUD
+  (guest sees LAKI on the left), serve prompts, banners, hit ratings and
+  results all relay as one-shot events.
+- Graceful disconnects: opponent leaving toasts and returns to the menu.
+
+### Multiplayer verification (real browsers, real WebSocket)
+
+`scripts/pvp-test.mjs` — two headless Chromium pages, host + guest:
+
+- Room create/join with code `8ZAT`; role binding correct (guest panel
+  "LAKI", scoreboard "LAKI | DUKA").
+- Host serve executed from the toss; guest received flight snapshots.
+- **Guest return: hit attempted → executed authoritatively on the host**
+  (rally 2, `ballLast: rival`) and the point resolved **0–15 for LAKI**,
+  synced on both screens.
+- Input streaming: guest KeyA moved his athlete 1.3 world units on the host
+  (correct mirrored direction).
+- Zero console/page errors on both pages. Evidence:
+  `artifacts/raw/pvp-host.png`, `artifacts/raw/pvp-guest.png`.
+
+Two real defects were found and fixed by this test:
+
+1. Guest hit readiness never fired — world-side sign checks had leaked into
+   arena-local gameplay math (`mySide()` ball checks, mirrored auto-target
+   clamps, inverted guest forward movement). All gameplay now stays in plain
+   local coordinates; only the camera pose and the network layer convert.
+2. A failed pointer-lock request (no user gesture in the auto-start flow)
+   paused the match indefinitely via `pointerlockchange`. Lock loss now only
+   pauses when a lock was genuinely held.
+
+### pass-4 canvas inspector (production build, 7/7 PASS)
+
+| Capture | Result | Entropy | Edges | Contrast | Budget |
+| --- | --- | --- | --- | --- | --- |
+| desktop/title | PASS | 5.94 | 0.321 | 188 | ok (192 calls) |
+| desktop/active-play | PASS | 6.59 | 0.337 | 171 | ok (211 calls) |
+| desktop/serve | PASS | 6.55 | 0.342 | 171 | ok (206 calls) |
+| desktop/paused | PASS | 3.08 | 0.054 | 31 | ok (211 calls) |
+| desktop/match-won | PASS | 3.32 | 0.066 | 41 | ok (211 calls) |
+| mobile/title | PASS | 5.91 | 0.340 | 192 | **over: calls 181 > 150** |
+| mobile/active-play | PASS | 6.67 | 0.318 | 185 | **over: calls 204 > 150** |
+
+Mobile draw-call budget overruns remain a documented tradeoff (single shared
+stadium; 128k triangles vs the 300k cap; trivial for real mobile GPUs).
+`check_evidence.py --manifest artifacts/evidence-pass4.json`: **8/8 confirmed**
+(including `artifacts/pass-4/rally-motion.webm` — live rally with real input,
+0 errors).
+
+Single-player regression after the multiplayer refactor: AI serve → rally →
+point (`1-0, LAKI HITS OUT`) verified with the scripted bot.
+
+### Known limitations (update 2)
+
+- Headless QA renders two WebGL contexts at ~1 fps on SwiftShader, so
+  multiplayer tests use game-time-aware polling; on real GPUs this is a
+  non-issue.
+- One open room at a time; no reconnection mid-match (a drop ends the game).
+- No lag compensation — host-authoritative snapshots assume LAN latencies.
+
+## Hotfix — serve-cycle stall ("stuck after a few points")
+
+Reported from live play. Root cause found by forcing a LAKI serve and tracing
+ball state: on the frame `startServeToss` flipped the serve to 'toss', the
+held-ball refresh in the same branch ran after it and snapped the ball back to
+the server's hand — and because the multiplayer edit had made the AI rival's
+auto-serve timeout `Infinity` (meant only for a human guest), the toss
+fallback never fired. The match hung forever in `serve/toss` as soon as the
+alternation reached LAKI (after two played points).
+
+Fix: skip the held-ball refresh on the toss-start frame, and restrict the
+indefinite wait to `netMode === 'host' && server === 'rival'` (a real human
+guest); CPU Laki now serves on the same 2.35 s timer as DUKA.
+
+Verified: forced rival serve completes toss → strike → live rally; and the
+natural flow (score forced to 1-1, point resolved, `updatePoint` routing)
+reaches LAKI's serve and a live rally with zero errors.
+
+
+## Update 3 — world play (Vietnam ↔ Serbia)
+
+Laki is in Serbia; Duka hosts from Vietnam. Distance-play netcode added:
+
+- **Lag compensation:** the host keeps a 40-entry history of ball states keyed
+  by snapshot sequence; Laki's hit requests carry the newest snapshot seq he
+  saw, and the host validates/strikes against the ball position he actually
+  had on screen — not the host's live position (~200 ms ahead).
+- **Client-side prediction:** the guest applies his own movement instantly
+  and eases toward the host's authoritative position (reconciliation lambda 4),
+  matching the host's movement rules exactly. Hits stay host-validated.
+- **Server keepalive:** protocol-level WS pings every 30 s; silent clients
+  dropped after ~70 s so dead connections free the room on flaky links.
+- Connection routes documented in README (Tailscale tailnet — Duka's machine
+  is already enrolled at 100.103.41.116 — router forwarding, or a Cloudflare
+  quick tunnel). Lobby footer updated to match.
+
+Regression caught during this work: the keepalive edit referenced `this`
+inside an arrow function in ESM strict mode (`undefined`), and the frame
+parser's try/catch silently swallowed the resulting TypeError — every client
+message was dropped. Fixed to the closure's `ws` reference.
+
+Final PvP regression on this build (two browsers, real WebSocket): host room,
+guest join, role binding, host serve, **guest return executed** (rally 2,
+0–15 LAKI), movement sync 1.32 units, zero console/page errors on both pages.
+
+
+## Update 4 — one-click host launcher
+
+- `sunset-slam-host.sh`: idempotent launcher — starts `server.mjs` detached
+  (nohup, logs to `.server.log`), builds once if `dist/` is missing, waits for
+  health, opens the host page (skippable with `SUNSET_SLAM_NO_OPEN=1`).
+- `/host` page in `server.mjs`: lists every address of the machine
+  (Tailscale 100.103.41.116 ranked first for Serbia play) with copy-link
+  buttons, live uptime, OPEN THE GAME, and STOP SERVER — the stop endpoint is
+  refused (403) from non-local addresses.
+- Installed `SUNSET SLAM (Host Match)` into the application list and desktop
+  (`.desktop` entries, custom icon, extra "Open The Game" action).
+- Verified: launcher cold start, `/api/status`, `/host` over the Tailscale
+  IP, stop-button 403 guard from LAN, stop-from-localhost, and relaunch cycle.

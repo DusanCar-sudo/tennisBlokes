@@ -1,0 +1,15 @@
+import { chromium } from 'playwright-core';
+const browser=await chromium.launch({executablePath:'/home/dusan/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',headless:true,args:['--headless=new','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--ignore-gpu-blocklist']});
+const page=await browser.newPage({viewport:{width:1280,height:720}});
+const errors=[];
+page.on('pageerror',e=>errors.push('PAGE: '+(e.stack||e.message)));
+page.on('console',m=>{if(m.type()==='error')errors.push('CON: '+m.text());});
+page.on('requestfailed',r=>errors.push('NET: '+r.url()+' '+(r.failure()?.errorText||'')));
+await page.goto('http://127.0.0.1:4173/',{waitUntil:'load'});
+await page.waitForFunction(()=>window.__THREE_GAME_DIAGNOSTICS__,null,{timeout:20000});
+await page.evaluate(async()=>{await window.__THREE_GAME_TEST_HOOKS__.setState('active-play');await window.__THREE_GAME_TEST_HOOKS__.setPausedForScreenshot(false);});
+await page.waitForTimeout(20000);
+await page.keyboard.press('Space');
+await page.waitForTimeout(5000);
+console.log(errors.join('\n')||'(no errors)');
+await browser.close();

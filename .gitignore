@@ -1,0 +1,26 @@
+# dependencies & build
+node_modules/
+dist/
+.npm-cache/
+.npm-logs/
+
+# runtime
+.server.log
+
+# unrelated projects in this workspace
+adosaura/
+danang_work/
+dev/
+_archive/
+.android-home/
+.gradle-home/
+final-*.png
+final-*.jpg
+
+# QA artifacts: keep only the current evidence pass
+artifacts/raw/
+artifacts/probe/
+artifacts/canvas-inspection/
+artifacts/pass-1/
+artifacts/pass-2/
+artifacts/pass-3/

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "runId": "pass-4",
+  "captures": [
+    { "mode": "desktop", "state": "title", "report": "artifacts/pass-4/desktop-title.json" },
+    { "mode": "desktop", "state": "active-play", "report": "artifacts/pass-4/desktop-active-play.json" },
+    { "mode": "desktop", "state": "serve", "report": "artifacts/pass-4/desktop-serve.json" },
+    { "mode": "desktop", "state": "paused", "report": "artifacts/pass-4/desktop-paused.json" },
+    { "mode": "desktop", "state": "match-won", "report": "artifacts/pass-4/desktop-match-won.json" },
+    { "mode": "mobile", "state": "title", "report": "artifacts/pass-4/mobile-title.json" },
+    { "mode": "mobile", "state": "active-play", "report": "artifacts/pass-4/mobile-active-play.json" }
+  ],
+  "artifacts": ["artifacts/pass-4/rally-motion.webm"]
+}

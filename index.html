@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#071626" />
+    <meta
+      name="description"
+      content="SUNSET SLAM — a third-person arcade tennis game. Move, aim, and let the auto-shot system pick the forehand, slice, volley or smash."
+    />
+    <title>SUNSET SLAM — Third-Person Arcade Tennis</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071523'/%3E%3Ccircle cx='32' cy='32' r='15' fill='%23ffd36e'/%3E%3Cpath d='M8 42h48' stroke='%23ff6846' stroke-width='5'/%3E%3C/svg%3E" />
+  </head>
+  <body class="is-booting">
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Sunset Slam tennis court"></canvas>
+
+      <div class="scene-grade" aria-hidden="true">
+        <div class="scene-vignette"></div>
+        <div class="scene-grain"></div>
+        <div class="scene-scan"></div>
+      </div>
+
+      <div id="boot-screen" class="boot-screen">
+        <div class="boot-mark" aria-hidden="true">
+          <span class="boot-sun"></span>
+          <span class="boot-horizon"></span>
+        </div>
+        <div class="boot-copy">
+          <span class="boot-league">NEON PALMS OPEN</span>
+          <strong>SUNSET SLAM</strong>
+          <span class="boot-status">PREPARING CENTER COURT</span>
+        </div>
+        <div class="boot-progress"><i></i></div>
+      </div>
+
+      <main id="game-ui" class="game-ui">
+        <!-- ─────────────────────────── TITLE ─────────────────────────── -->
+        <section id="title-screen" class="screen title-screen" aria-label="Sunset Slam main menu">
+          <header class="title-ribbon">
+            <div class="league-lockup">
+              <span class="league-mark" aria-hidden="true">
+                <svg viewBox="0 0 44 44" fill="none">
+                  <circle cx="22" cy="22" r="8.5" fill="#ffd36e" />
+                  <g stroke="#ffd36e" stroke-width="2.4" stroke-linecap="round">
+                    <path d="M22 4v5M22 35v5M4 22h5M35 22h5M9.3 9.3l3.5 3.5M31.2 31.2l3.5 3.5M34.7 9.3l-3.5 3.5M12.8 31.2l-3.5 3.5" />
+                  </g>
+                </svg>
+              </span>
+              <span class="league-copy">
+                <b>NEON PALMS OPEN</b>
+                <small>CENTER COURT · SUNSET SESSION</small>
+              </span>
+            </div>
+            <div class="ribbon-meta">
+              <span class="live-pip"></span>
+              <span>EXHIBITION</span>
+              <span class="ribbon-divider"></span>
+              <span class="mono">18:42 LOCAL</span>
+            </div>
+          </header>
+
+          <div class="title-layout">
+            <div class="title-copy">
+              <p class="eyebrow"><span></span> THIRD-PERSON ARCADE TENNIS</p>
+              <h1 aria-label="Sunset Slam">
+                <span class="title-word">SUNSET</span>
+                <span class="title-word title-accent">SLAM</span>
+              </h1>
+              <p class="title-tagline">
+                You move. You aim.<br />
+                <strong>The game picks the shot.</strong>
+              </p>
+              <div class="title-actions">
+                <button id="play-btn" class="btn btn-primary" type="button">
+                  <span>VS COMPUTER</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg>
+                </button>
+                <button id="howto-btn" class="btn btn-ghost" type="button">HOW TO PLAY</button>
+              </div>
+              <div class="title-actions title-actions-net">
+                <button id="host-btn" class="btn btn-lan" type="button">
+                  <span class="btn-lan-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 11a8 8 0 0 1 16 0M7 14a5 5 0 0 1 10 0M12 17.5v.01" /></svg></span>
+                  <span>HOST LAN MATCH</span>
+                </button>
+                <button id="join-btn" class="btn btn-lan" type="button">
+                  <span class="btn-lan-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></span>
+                  <span>JOIN LAKI</span>
+                </button>
+              </div>
+              <ul class="feature-chips" aria-label="Game features">
+                <li><span class="chip-dot"></span> AUTO SHOT SELECT</li>
+                <li><span class="chip-dot"></span> OVER-SHOULDER CAMERA</li>
+                <li><span class="chip-dot"></span> LAN 1V1 VS LAKI</li>
+              </ul>
+            </div>
+
+            <aside class="match-ticket" aria-label="Match card">
+              <div class="ticket-head"><span>MATCH CARD</span><span>TIEBREAK · FIRST TO 4</span></div>
+              <div class="ticket-player ticket-mate">
+                <span class="ticket-avatar avatar-jax">JX</span>
+                <span class="ticket-name"><b>DUKA</b><small>HOME · YOU</small></span>
+                <span class="ticket-seed">01</span>
+              </div>
+              <div class="ticket-vs"><span></span>VS<span></span></div>
+              <div class="ticket-player ticket-rival">
+                <span class="ticket-avatar avatar-riko">RK</span>
+                <span class="ticket-name"><b>LAKI</b><small>AWAY · CPU OR LAN</small></span>
+                <span class="ticket-seed">02</span>
+              </div>
+              <div class="ticket-venue">
+                <span>COURT 01</span>
+                <span>NEON PALMS · CENTER</span>
+              </div>
+              <div class="ticket-stub" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </aside>
+          </div>
+
+          <footer class="title-footer">
+            <div class="title-controls">
+              <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span>
+              <span><kbd>MOUSE</kbd> AIM</span>
+              <span><kbd>CLICK</kbd> HIT</span>
+              <span><kbd>ESC</kbd> PAUSE</span>
+            </div>
+            <div class="title-controls-mobile">
+              <span><i></i> STICK MOVE</span>
+              <span><i></i> DRAG AIM</span>
+              <span><i></i> HIT AUTO</span>
+            </div>
+            <div class="title-build mono">SUNSET SLAM / BUILD 01</div>
+          </footer>
+        </section>
+
+        <!-- ─────────────────────────── HUD ─────────────────────────── -->
+        <div id="hud" class="hud" hidden aria-hidden="true">
+          <div class="hud-top">
+            <div class="player-panel">
+              <span class="player-avatar">JX</span>
+              <span class="player-id"><b>DUKA</b><small><i></i> AUTO-SHOT ONLINE</small></span>
+            </div>
+
+            <div class="scoreboard">
+              <div class="score-team score-mate">
+                <span class="serve-pip" id="player-serve" title="Serving"></span>
+                <span class="score-name">DUKA</span>
+                <span class="score-points" id="player-points">0</span>
+              </div>
+              <div class="score-center">
+                <span id="match-label">GAME 1 · FIRST TO 4</span>
+                <strong id="score-meta">READY</strong>
+              </div>
+              <div class="score-team score-rival">
+                <span class="score-points" id="rival-points">0</span>
+                <span class="score-name">LAKI</span>
+                <span class="serve-pip" id="rival-serve" title="Serving"></span>
+              </div>
+            </div>
+
+            <div class="hud-meta">
+              <div class="meta-chip"><span>RALLY</span><b id="rally-count">0</b></div>
+              <div class="meta-chip"><span>TOP SPEED</span><b><span id="top-speed">0</span><small>KM/H</small></b></div>
+              <button id="sound-btn" class="icon-button" type="button" aria-label="Toggle sound" title="Toggle sound">
+                <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" /></svg>
+                <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="m17 9 5 6M22 9l-5 6" /></svg>
+              </button>
+              <button id="pause-btn" class="icon-button" type="button" aria-label="Pause game" title="Pause">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="match-point-flag" id="match-point-flag" hidden>MATCH POINT</div>
+
+          <div class="aim-layer" id="aim-layer">
+            <div class="reticle" id="reticle">
+              <svg class="reticle-ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="ring-track" cx="60" cy="60" r="45"></circle>
+                <circle class="ring-fill" id="readiness-ring" cx="60" cy="60" r="45"></circle>
+              </svg>
+              <span class="reticle-corner corner-tl"></span>
+              <span class="reticle-corner corner-tr"></span>
+              <span class="reticle-corner corner-bl"></span>
+              <span class="reticle-corner corner-br"></span>
+              <span class="reticle-dot"></span>
+            </div>
+            <div class="shot-chip" id="shot-chip">
+              <span class="shot-auto">AUTO SHOT</span>
+              <strong id="auto-shot">TOPSPIN</strong>
+              <span id="auto-hand">FOREHAND</span>
+            </div>
+            <div id="prompt" class="prompt">GET READY</div>
+          </div>
+
+          <div class="hit-feedback" id="hit-feedback">
+            <strong id="hit-rating">PERFECT</strong>
+            <span id="hit-detail">TOPSPIN · 138 KM/H</span>
+          </div>
+
+          <div class="hud-bottom">
+            <div class="desktop-controls">
+              <div class="control-row">
+                <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+                <span class="control-label">MOVE</span>
+              </div>
+              <div class="control-row">
+                <span class="keys"><kbd>MOUSE</kbd></span>
+                <span class="control-label">AIM</span>
+              </div>
+              <div class="control-row accent-row">
+                <span class="keys"><kbd>CLICK</kbd></span>
+                <span class="control-label">HIT</span>
+              </div>
+              <div class="control-row subtle-row"><span class="control-label">SHIFT SPRINT · RMB FOCUS · ESC PAUSE</span></div>
+            </div>
+
+            <div class="auto-plaque">
+              <span class="plaque-mark">A</span>
+              <span><b>AUTO-SHOT SYSTEM</b><small>Forehand / backhand / slice / volley / smash are chosen for you.</small></span>
+            </div>
+
+            <div class="session-plaque">
+              <span class="mono">COURT 01</span>
+              <span>SUNSET SESSION</span>
+            </div>
+          </div>
+
+          <div id="touch-ui" class="touch-ui" hidden>
+            <div class="joystick-zone" id="joystick-zone">
+              <div class="joystick-base">
+                <span class="joystick-crosshair"></span>
+                <div class="joystick-knob" id="joystick-knob"></div>
+              </div>
+              <span class="touch-label">MOVE</span>
+            </div>
+            <div class="aim-touch-zone" id="aim-touch-zone">
+              <span class="touch-aim-label" id="touch-aim-label">DRAG HERE TO AIM</span>
+            </div>
+            <button class="hit-button" id="hit-button" type="button">
+              <span>HIT</span>
+              <small>AUTO SHOT</small>
+            </button>
+          </div>
+
+          <div class="off-screen-marker" id="off-screen-marker" hidden>
+            <span></span>
+            <b>BALL</b>
+          </div>
+        </div>
+
+        <!-- ─────────────────────────── MODALS ─────────────────────────── -->
+        <section id="pause-screen" class="screen overlay-screen" hidden aria-label="Paused">
+          <div class="overlay-scrim"></div>
+          <div class="modal pause-modal">
+            <span class="modal-kicker">PLAY SUSPENDED</span>
+            <h2>PAUSED</h2>
+            <p class="modal-lede">The rally waits. No rush.</p>
+            <div class="modal-actions">
+              <button id="resume-btn" class="btn btn-primary" type="button"><span>RESUME</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
+              <button id="pause-restart" class="btn btn-ghost" type="button">RESTART MATCH</button>
+            </div>
+            <div class="setting-strip">
+              <button id="pause-sound" class="setting-toggle" type="button">SOUND <span>ON</span></button>
+              <button id="pause-music" class="setting-toggle" type="button">MUSIC <span>ON</span></button>
+              <button id="pause-quit" class="setting-toggle danger" type="button">QUIT TO TITLE</button>
+            </div>
+            <div class="modal-control-list">
+              <span><kbd>WASD</kbd> move</span>
+              <span><kbd>MOUSE</kbd> aim</span>
+              <span><kbd>CLICK</kbd> hit</span>
+              <span><kbd>SHIFT</kbd> sprint</span>
+              <span><kbd>RMB</kbd> focus</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="howto-screen" class="screen overlay-screen" hidden aria-label="How to play">
+          <div class="overlay-scrim"></div>
+          <div class="modal howto-modal">
+            <span class="modal-kicker">THE SYSTEM</span>
+            <h2>PLAY SIMPLE.</h2>
+            <p class="modal-lede">Three inputs. One automatic shot engine. Hold the baseline like a pro.</p>
+            <div class="howto-steps">
+              <article>
+                <span class="step-icon icon-move" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <b>MOVE</b>
+                <p><kbd>W A S D</kbd> or the stick. Get behind the ball before it lands.</p>
+              </article>
+              <article>
+                <span class="step-icon icon-aim" aria-hidden="true"><i></i></span>
+                <b>AIM</b>
+                <p>Point the reticle anywhere in Riko's court. Mouse or drag.</p>
+              </article>
+              <article>
+                <span class="step-icon icon-hit" aria-hidden="true"><i></i></span>
+                <b>HIT</b>
+                <p><kbd>CLICK</kbd> or the HIT button when the ring goes live. Timing is power.</p>
+              </article>
+            </div>
+            <div class="auto-shot-table">
+              <div class="auto-table-head"><span>AUTO-SHOT SYSTEM</span><span>SITUATION → SHOT</span></div>
+              <div class="auto-row"><span>High ball at the net</span><b>SMASH</b></div>
+              <div class="auto-row"><span>Inside the service box</span><b>VOLLEY</b></div>
+              <div class="auto-row"><span>Low ball, stretched</span><b>SLICE</b></div>
+              <div class="auto-row"><span>High, deep, neutral</span><b>TOPSPIN</b></div>
+              <div class="auto-row"><span>Start of point</span><b>AUTO SERVE</b></div>
+            </div>
+            <div class="modal-actions"><button id="howto-close" class="btn btn-primary" type="button"><span>GOT IT</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button></div>
+          </div>
+        </section>
+
+        <section id="results-screen" class="screen overlay-screen results-screen" hidden aria-label="Match results">
+          <div class="overlay-scrim"></div>
+          <div class="modal results-modal">
+            <span class="modal-kicker" id="result-kicker">MATCH COMPLETE</span>
+            <h2 id="result-title">MATCH WON</h2>
+            <p class="modal-lede" id="result-line">DUKA takes the tiebreak.</p>
+            <div class="result-scoreline" id="result-scoreline">4 — 2</div>
+            <div class="result-stats">
+              <div><span>POINTS</span><b id="stat-points">0</b></div>
+              <div><span>TOP SPEED</span><b><span id="stat-speed">0</span><small>KM/H</small></b></div>
+              <div><span>LONGEST RALLY</span><b id="stat-rally">0</b></div>
+              <div><span>PERFECT HITS</span><b id="stat-perfect">0</b></div>
+            </div>
+            <div class="modal-actions">
+              <button id="rematch-btn" class="btn btn-primary" type="button"><span>REMATCH</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
+              <button id="title-btn" class="btn btn-ghost" type="button">BACK TO TITLE</button>
+            </div>
+            <p class="result-foot" id="result-foot">AUTO-SHOT SYSTEM REPORT</p>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────── LOBBY ─────────────────────────── -->
+        <section id="lobby-screen" class="screen overlay-screen" hidden aria-label="LAN lobby">
+          <div class="overlay-scrim"></div>
+          <div class="modal lobby-modal">
+            <span class="modal-kicker" id="lobby-kicker">LAN MATCH</span>
+            <h2 id="lobby-title">HOSTING…</h2>
+            <p class="modal-lede" id="lobby-lede">Share the match with Laki.</p>
+
+            <div class="lobby-code-row" id="lobby-code-row">
+              <span class="lobby-code-label">MATCH CODE</span>
+              <strong class="lobby-code" id="lobby-code">----</strong>
+              <button id="copy-link-btn" class="setting-toggle" type="button">COPY LINK</button>
+            </div>
+
+            <div class="lobby-fields" id="lobby-fields">
+              <label class="lobby-field">
+                <span>YOUR NAME</span>
+                <input id="name-input" maxlength="12" autocomplete="off" spellcheck="false" />
+              </label>
+              <label class="lobby-field" id="code-field">
+                <span>MATCH CODE <small>(OPTIONAL)</small></span>
+                <input id="code-input" maxlength="4" autocomplete="off" spellcheck="false" placeholder="e.g. K7QF" />
+              </label>
+            </div>
+
+            <div class="lobby-status" id="lobby-status">
+              <span class="lobby-spinner" aria-hidden="true"></span>
+              <span id="lobby-status-text">WAITING FOR LAKI TO JOIN…</span>
+            </div>
+
+            <div class="lobby-vs" id="lobby-vs" hidden>
+              <span class="ticket-avatar avatar-jax">DU</span>
+              <b id="lobby-vs-me">DUKA</b>
+              <span class="ticket-vs"><span></span>VS<span></span></span>
+              <b id="lobby-vs-opp">LAKI</b>
+              <span class="ticket-avatar avatar-riko">LA</span>
+            </div>
+
+            <div class="modal-actions">
+              <button id="lobby-cancel" class="btn btn-ghost" type="button">CANCEL</button>
+              <button id="lobby-go" class="btn btn-primary" type="button" hidden><span>JOIN MATCH</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" /></svg></button>
+            </div>
+            <p class="result-foot" id="lobby-foot">SHARE THE LINK — WORKS ON ANY NETWORK, ANY DISTANCE</p>
+          </div>
+        </section>
+
+        <!-- ─────────────────────────── BANNERS ─────────────────────────── -->
+        <div id="banner-layer" class="banner-layer" aria-live="polite">
+          <div class="point-banner" id="point-banner" hidden>
+            <span id="point-kicker">POINT</span>
+            <strong id="point-title">DUKA</strong>
+            <span id="point-reason">FOREHAND WINNER</span>
+          </div>
+          <div class="countdown" id="countdown" hidden>
+            <span class="countdown-kicker">NEXT POINT</span>
+            <strong id="countdown-value">READY</strong>
+            <span class="countdown-sub" id="countdown-sub">YOUR SERVE</span>
+          </div>
+        </div>
+
+        <div id="toast" class="toast" hidden>
+          <span class="toast-mark">A</span>
+          <span><b>AUTO-SHOT ONLINE</b><small>We pick forehand, slice, volley or smash. You just move, aim and hit.</small></span>
+        </div>
+
+        <div id="flash" class="flash" aria-hidden="true"></div>
+        <div id="confetti" class="confetti" aria-hidden="true"></div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

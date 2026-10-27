@@ -1,0 +1,12 @@
+import { chromium } from 'playwright-core';
+const browser=await chromium.launch({executablePath:'/home/dusan/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome',headless:true,args:['--headless=new','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--ignore-gpu-blocklist']});
+const page=await browser.newPage({viewport:{width:1280,height:720}});
+await page.goto('http://127.0.0.1:4173/',{waitUntil:'load'});
+await page.waitForFunction(()=>window.__THREE_GAME_DIAGNOSTICS__,null,{timeout:20000});
+await page.waitForTimeout(1000);
+console.log('live-title', JSON.stringify(await page.evaluate(()=>window.__THREE_GAME_DIAGNOSTICS__.renderer)));
+await page.evaluate(async()=>{await window.__THREE_GAME_TEST_HOOKS__.setState('active-play');});
+console.log('after-setState', JSON.stringify(await page.evaluate(()=>window.__THREE_GAME_DIAGNOSTICS__.renderer)));
+await page.waitForTimeout(500);
+console.log('after-500ms', JSON.stringify(await page.evaluate(()=>window.__THREE_GAME_DIAGNOSTICS__.renderer)));
+await browser.close();

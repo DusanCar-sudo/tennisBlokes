@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "runId": "probe",
+  "captures": [
+    { "mode": "desktop", "state": "active-play", "report": "artifacts/probe/desktop-active-play.json" }
+  ]
+}
