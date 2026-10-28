@@ -89,6 +89,21 @@ validation uses the state Laki actually saw.
 | `Esc` | Pause (also resumes) |
 | `M` | Mute |
 
+## Forehand or backhand — you can see it coming
+
+The auto-shot system also picks the **hand**: a ball arriving on your right is
+a forehand, on your left a backhand. The game telegraphs it before contact so
+you can read the ball:
+
+- the athlete **coils to the striking side** in the ready stance (racket out
+  to the right for forehand, racket across the body for a two-handed backhand)
+- the HUD chip shows the side: **FOREHAND ▶** / **◀ BACKHAND**
+- a small **catch assist** lunges you the last half metre into balls that are
+  just out of reach, so late reactions still connect
+
+![Backhand stance](artifacts/replay-demo/stance-backhand.png)
+![Forehand stance](artifacts/replay-demo/stance-forehand.png)
+
 ## The auto-shot system
 
 You never pick a stroke. The system reads ball height, your court position and
@@ -102,8 +117,17 @@ your aim, then announces the shot on the HUD chip and colors the reticle:
 - **Start of the point** → auto SERVE
 
 Timing is the skill: the contact rating (PERFECT / GOOD / LATE / STRETCH)
-scales power and precision. Riko the rival errs under stretch and long rallies,
+scales power and precision. Laki the rival errs under stretch and long rallies,
 so points end through winners *and* mistakes.
+
+## Point replay — slow motion
+
+Every rally is recorded in a rolling buffer. When a point ends, the game cuts
+to a **slow-motion replay** of the final shot — letterboxed, broadcast camera,
+slow-motion badge — then reveals the point graphic and moves to the next serve.
+Plays on both sides in LAN/internet matches too.
+
+![Slow motion replay](artifacts/replay-demo/slow-motion-replay.png)
 
 ## Tech
 

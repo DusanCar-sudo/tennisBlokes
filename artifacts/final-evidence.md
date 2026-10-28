@@ -256,3 +256,38 @@ guest join, role binding, host serve, **guest return executed** (rally 2,
   (`.desktop` entries, custom icon, extra "Open The Game" action).
 - Verified: launcher cold start, `/api/status`, `/host` over the Tailscale
   IP, stop-button 403 guard from LAN, stop-from-localhost, and relaunch cycle.
+
+
+## Update 5 — forehand/backhand perception + point replay
+
+Requested: make forehand and backhand readable so the ball can be perceived
+and caught, and add a slow-motion preview when a point ends.
+
+Implemented:
+
+- **Readiness stance** — while the ball travels toward an athlete, the rig
+  coils to the striking side (right-arm/racket out for forehand; both arms
+  across for backhand). `readyHand` is passed from ball-vs-body side each
+  frame with smooth blending (`readySide` damped), for both Duka and Laki.
+- **HUD side cue** — auto-shot chip now shows `FOREHAND ▶` / `◀ BACKHAND`.
+- **Catch assist** — a hit pressed with the ball just outside reach
+  (≤ reach + 0.85 m) auto-lunges the athlete up to 0.85 m toward contact and
+  still strikes.
+- **Point replay** — rolling 260-frame record buffer; on point end ~1.05 s of
+  footage plays at 0.34× speed from a side broadcast camera with letterbox
+  bars, SLOW MOTION badge, dimmed HUD, and aim overlay hidden. Point banner,
+  audio and cheer are deferred until the replay ends, then the next serve
+  begins. Host relays a `slowmo` event so LAN guests get the same sequence.
+
+Verified (`scripts/features-test.mjs`, `scripts/replay-natural.mjs`):
+
+- stance values: ball left → `readySide ≈ -1` (backhand), ball right → `+1`
+  (forehand); HUD hand cue switches accordingly (screenshots committed:
+  `artifacts/replay-demo/stance-*.png`)
+- catch assist: ball at 2.8 m (reach 2.45 m) → player auto-steps 0.7 m and
+  the hit registers (`lastHitter: player`, rally counted)
+- replay: 65-frame forced point → badge + letterbox + slow-mo ball motion →
+  banner (DUKA, 1–0) → next serve; natural rally → 43 recorded frames →
+  reaply → next point, zero console errors
+- pass-5 canvas inspector: **7/7 PASS** (same metrics as pass-4; mobile draw
+  calls documented tradeoff unchanged)

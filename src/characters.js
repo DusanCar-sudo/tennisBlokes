@@ -835,6 +835,30 @@ export class TennisCharacter {
       hipY += Math.sin(this.time * 2.1) * 0.003;
     }
 
+    // ── Forehand / backhand readiness ─────────────────────────────────
+    // While the ball travels toward this athlete, the body visibly coils to
+    // the striking side so the player can read which stroke is coming.
+    const wantHand = opts.readyHand || null;
+    const wantSide = wantHand === 'forehand' ? 1 : wantHand === 'backhand' ? -1 : 0;
+    this.readySide = lerp(this.readySide ?? 0, wantSide, 1 - Math.exp(-9 * dt));
+    if (!this.swing && this.serveToss === null && Math.abs(this.readySide) > 0.02) {
+      const f = this.readySide;
+      torsoY += -0.24 * f;
+      torsoZ += 0.03 * f;
+      rShoulderZ += 0.34 * f;
+      rShoulderY += 0.08 * f;
+      rShoulderX += -0.04 * f;
+      rElbowX += 0.16 * f;
+      // Backhand loads both hands across the body.
+      lShoulderX += 0.2 * Math.max(0, -f);
+      lShoulderZ += -0.14 * Math.max(0, -f);
+      lElbowX += 0.12 * Math.max(0, -f);
+      headY += 0.1 * f;
+      hipY -= 0.012 * Math.abs(f);
+      lKneeX -= 0.04 * Math.abs(f);
+      rKneeX -= 0.04 * Math.abs(f);
+    }
+
     if (this.serveToss !== null) {
       this.serveToss += dt;
       const t = clamp(this.serveToss / 0.85, 0, 1);

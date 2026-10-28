@@ -160,6 +160,11 @@ class SunsetSlam {
     this.snapSeq = 0;
     this.snapHistory = [];          // recent ball states, keyed by snapshot seq
     this.guestSnapSq = 0;           // newest snapshot seq Laki has seen
+
+    // Point replay / slow motion.
+    this.recordBuffer = [];         // rolling rally recording
+    this.replay = null;             // active replay state
+    this.pendingPoint = null;       // point result waiting for replay
     this.lastNetStatus = null;
     this.snapshot = null;
     this.snapshotPrev = null;
@@ -920,6 +925,9 @@ class SunsetSlam {
   }
 
   beginServe(server) {
+    this.recordBuffer.length = 0;
+    this.pendingPoint = null;
+    this.ui.hideReplay();
     this.placeForServe(server);
     if (this.netMode === 'host') {
       this.pushNetEvent({ ev: 'hidebanners' });
@@ -1087,9 +1095,25 @@ class SunsetSlam {
     // Ball must be on my side of the net (arena-local: my half is +Z).
     if (contact.z < -0.05) return;
 
-    const horizontal = horizontalDistance(contact, this.player.pos);
+    let horizontal = horizontalDistance(contact, this.player.pos);
     const canReach = horizontal <= TUNING.playerReach + 0.08 && contact.y < 3.45 && contact.y > 0.02;
-    if (!canReach) {
+    // Catch assist: a small automatic lunge into balls that are just out of
+    // reach makes late reaction readable instead of punishing.
+    const lungeRange = TUNING.playerReach + 0.85;
+    if (!canReach && horizontal <= lungeRange && contact.y < 3.45 && contact.y > 0.02) {
+      const dx = contact.x - this.player.pos.x;
+      const dz = contact.z - this.player.pos.z;
+      const len = Math.hypot(dx, dz) || 1;
+      const step = Math.min(0.85, Math.max(0, horizontal - TUNING.playerReach + 0.35));
+      this.player.pos.x = clamp(this.player.pos.x + (dx / len) * step, -PLAYER_BOUNDS.x, PLAYER_BOUNDS.x);
+      this.player.pos.z = clamp(this.player.pos.z + (dz / len) * step, PLAYER_BOUNDS.zMin, PLAYER_BOUNDS.zMax);
+      horizontal = horizontalDistance(contact, this.player.pos);
+      this.effects.spawnRing(
+        new THREE.Vector3(this.player.pos.x, 0.03, this.player.pos.z),
+        0x9af4df, 0.9, 0.28
+      );
+    }
+    if (horizontal > TUNING.playerReach + 0.08) {
       const shot = this.selectShotType(contact);
       this.playerCharacter.triggerSwing(shot.type, shot.hand);
       this.player.swingCooldown = TUNING.swingCooldown * 0.78;
@@ -1744,7 +1768,18 @@ class SunsetSlam {
     }
   }
 
+  // Which side the incoming ball is on — drives the readiness stance and the
+  // HUD forehand/backhand cue.
+  getIncomingHand() {
+    const b = this.ball;
+    if (!b || b.mode !== 'flight' || this.phase !== 'rally') return null;
+    if (b.pos.z < 0.15 || b.pos.z > 13) return null;
+    if (horizontalDistance(b.pos, this.player.pos) > 8) return null;
+    return b.pos.x >= this.player.pos.x ? 'forehand' : 'backhand';
+  }
+
   updateCharacters(dt, playerSpeed, rivalSpeed) {
+    const incomingHand = this.getIncomingHand();
     const playerFacing = -this.aimYaw;
     const targetYaw = playerFacing;
     this.playerCharacter.root.rotation.y = damp(
@@ -1765,6 +1800,7 @@ class SunsetSlam {
       speed: playerSpeed,
       maxSpeed: TUNING.playerSprintSpeed,
       localMove: localMoveP,
+      readyHand: incomingHand,
     });
 
     const rivalFacing = Math.PI;
@@ -1781,10 +1817,18 @@ class SunsetSlam {
       x: this.rival.vel.dot(rightR) / Math.max(TUNING.rivalSpeed, 0.001),
       z: this.rival.vel.dot(forwardR) / Math.max(TUNING.rivalSpeed, 0.001),
     };
+    const rivalHand = (() => {
+      const b = this.ball;
+      if (!b || b.mode !== 'flight' || this.phase !== 'rally' || b.pos.z > -0.15) return null;
+      if (horizontalDistance(b.pos, this.rival.pos) > 8) return null;
+      // mirrored viewpoint: ball on world-left is a forehand for the rival
+      return b.pos.x <= this.rival.pos.x ? 'forehand' : 'backhand';
+    })();
     this.rivalCharacter.update(dt, {
       speed: rivalSpeed,
       maxSpeed: TUNING.rivalSpeed,
       localMove: localMoveR,
+      readyHand: rivalHand,
     });
 
     // Keep the ball shadow out of weird states during the title screen.
@@ -1843,6 +1887,138 @@ class SunsetSlam {
     }
   }
 
+  // ───────────────────────── point replay (slow motion) ─────────────────────────
+
+  recordReplayFrame() {
+    if (!['rally', 'serve'].includes(this.phase)) return;
+    const t = this.elapsed;
+    const last = this.recordBuffer[this.recordBuffer.length - 1];
+    if (last && t - last.t < 0.016) return;
+    this.recordBuffer.push({
+      t,
+      bx: this.ball.pos.x, by: this.ball.pos.y, bz: this.ball.pos.z,
+      px: this.player.pos.x, pz: this.player.pos.z,
+      rx: this.rival.pos.x, rz: this.rival.pos.z,
+      mode: this.ball.mode,
+    });
+    if (this.recordBuffer.length > 260) this.recordBuffer.shift();
+  }
+
+  startReplayOrPresent() {
+    const window = 1.05; // seconds of footage before the point ended
+    const cutoff = this.elapsed - window;
+    const frames = this.recordBuffer.filter((f) => f.t >= cutoff);
+    if (frames.length >= 14 && !this.screenshotPaused) {
+      this.replay = { frames, clock: 0, speed: 0.34 };
+      this.ui.hidePointBanner();
+      this.ui.hideCountdown();
+      this.ui.showReplay();
+      this.aimMarker.visible = false;
+      this.bounceMarker.visible = false;
+      this.arcPreview.visible = false;
+      if (this.netMode === 'host') this.pushNetEvent({ ev: 'slowmo' });
+      if (this.netMode === 'guest') this.ui.showReplay();
+      this.audio.playSwing('smash');
+    } else {
+      this.presentPoint();
+    }
+  }
+
+  updateReplay(dt) {
+    const r = this.replay;
+    this.aimMarker.visible = false;
+    this.bounceMarker.visible = false;
+    this.arcPreview.visible = false;
+    const frames = r.frames;
+    r.clock += dt * r.speed;
+    const t0 = frames[0].t;
+    const target = t0 + r.clock;
+    let i = 0;
+    while (i < frames.length - 2 && frames[i + 1].t < target) i += 1;
+    const a = frames[i];
+    const b = frames[Math.min(i + 1, frames.length - 1)];
+    const span = Math.max(0.0001, b.t - a.t);
+    const k = clamp((target - a.t) / span, 0, 1);
+    const lerpV = (va, vb) => va + (vb - va) * k;
+
+    this.ball.pos.set(lerpV(a.bx, b.bx), lerpV(a.by, b.by), lerpV(a.bz, b.bz));
+    this.ball.mesh.position.copy(this.ball.pos);
+    this.ball.mesh.visible = true;
+    if (this.ball.glow) {
+      this.ball.glow.visible = true;
+      this.ball.glow.position.copy(this.ball.pos);
+    }
+    this.ball.shadow.visible = true;
+    this.ball.shadow.position.set(this.ball.pos.x, 0.014, this.ball.pos.z);
+    this.ball.rim.visible = true;
+    this.ball.rim.position.copy(this.ball.pos);
+
+    this.player.pos.set(lerpV(a.px, b.px), 0, lerpV(a.pz, b.pz));
+    this.rival.pos.set(lerpV(a.rx, b.rx), 0, lerpV(a.rz, b.rz));
+    this.playerCharacter.root.position.copy(this.player.pos);
+    this.rivalCharacter.root.position.copy(this.rival.pos);
+    this.playerCharacter.update(dt, { speed: 0, maxSpeed: TUNING.playerSpeed });
+    this.rivalCharacter.update(dt, { speed: 0, maxSpeed: TUNING.rivalSpeed });
+
+    if (r.clock >= frames[frames.length - 1].t - t0) {
+      this.replay = null;
+      this.ui.hideReplay();
+      this.presentPoint();
+    }
+  }
+
+  updateReplayCamera(dt) {
+    // Slow broadcast angle: side-on, tracking the ball.
+    const focus = new THREE.Vector3(
+      this.ball.pos.x * 0.6 + this.player.pos.x * 0.4,
+      1.05,
+      this.ball.pos.z * 0.6 + this.player.pos.z * 0.4
+    );
+    const desired = new THREE.Vector3(
+      this.player.pos.x + 3.9,
+      3.05,
+      this.player.pos.z + 4.9
+    );
+    this.camera.position.lerp(desired, 1 - Math.exp(-6 * dt));
+    this.camera.lookAt(focus);
+    this.currentFov = damp(this.currentFov, 52, 5, dt);
+    this.camera.fov = this.currentFov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  presentPoint() {
+    const info = this.pendingPoint;
+    if (!info) return;
+    this.pendingPoint = null;
+    const { playerWon, reason, winner } = info;
+    this.pointTimer = TUNING.pointBannerTime;
+    this.ui.showPointBanner({
+      kicker: playerWon ? 'POINT · DUKA' : 'POINT · LAKI',
+      title: playerWon ? 'DUKA' : 'LAKI',
+      reason: String(reason).toUpperCase(),
+      tone: playerWon ? 'player' : 'rival',
+    });
+    if (this.netMode === 'host') {
+      this.pushNetEvent({
+        ev: 'point',
+        kicker: playerWon ? 'POINT · DUKA' : 'POINT · YOU',
+        title: playerWon ? 'DUKA' : 'YOU',
+        reason: String(reason).toUpperCase(),
+        tone: playerWon ? 'player' : 'rival',
+        winner,
+      });
+    }
+    this.ui.flashPoint();
+    this.audio.playPoint(winner);
+    this.world.cheer(playerWon ? 1 : 0.55);
+    this.ui.showHitFeedback({
+      rating: playerWon ? 'POINT DUKA' : 'POINT LAKI',
+      detail: reason,
+      tone: playerWon ? 'perfect' : 'poor',
+      duration: 1200,
+    });
+  }
+
   awardPoint(winner, reason) {
     if (this.phase !== 'rally' && this.phase !== 'serve') return;
     if (winner !== 'player' && winner !== 'rival') return;
@@ -1865,25 +2041,8 @@ class SunsetSlam {
     this.hitstop = 0;
     this.ui.setPrompt(playerWon ? 'NICE POINT' : 'STAY IN THE RALLY', playerWon ? 'ready' : 'warning');
     this.ui.setRally(this.rally);
-    this.ui.showPointBanner({
-      kicker: playerWon ? 'POINT · DUKA' : 'POINT · LAKI',
-      title: playerWon ? 'DUKA' : 'LAKI',
-      reason: reason.toUpperCase(),
-      tone: playerWon ? 'player' : 'rival',
-    });
-    if (this.netMode === 'host') {
-      this.pushNetEvent({
-        ev: 'point',
-        kicker: playerWon ? 'POINT · DUKA' : 'POINT · YOU',
-        title: playerWon ? 'DUKA' : 'YOU',
-        reason: reason.toUpperCase(),
-        tone: playerWon ? 'player' : 'rival',
-        winner,
-      });
-    }
-    this.ui.flashPoint();
-    this.audio.playPoint(winner);
-    this.world.cheer(playerWon ? 1 : 0.55);
+    this.pendingPoint = { winner, reason, playerWon, matchWon };
+    this.startReplayOrPresent();
     this.matchPoint = !matchWon && this.wouldWinNextPoint();
     this.updateScoreHud();
     this.world.setScoreboard({
@@ -1896,15 +2055,13 @@ class SunsetSlam {
     if (matchWon) {
       this.matchWinner = winner;
     }
-    this.ui.showHitFeedback({
-      rating: playerWon ? 'POINT DUKA' : 'POINT LAKI',
-      detail: reason,
-      tone: playerWon ? 'perfect' : 'poor',
-      duration: 1200,
-    });
   }
 
   updatePoint(dt) {
+    if (this.replay) {
+      this.updateReplay(dt);
+      return true;
+    }
     this.pointTimer -= dt;
     this.rival.reactionTimer = 0;
     this.updateRival(dt);
@@ -1917,6 +2074,7 @@ class SunsetSlam {
         this.beginServe(nextServer);
       }
     }
+    return false;
   }
 
   finishMatch(winner) {
@@ -2092,6 +2250,12 @@ class SunsetSlam {
       return;
     }
 
+    if (this.replay) {
+      this.updateReplayCamera(dt);
+      if (this.effects) this.effects.applyCameraShake(this.camera);
+      return;
+    }
+
     // Pose/direction are computed in arena-local space; on a guest machine the
     // arena is rotated 180°, so convert to world for the scene-space camera.
     const localPose = this.cameraPose();
@@ -2248,6 +2412,11 @@ class SunsetSlam {
   updateHud(dt) {
     if (this.phase === 'title' || this.phase === 'over') {
       this.ui.setOffscreenMarker(false);
+      return;
+    }
+    if (this.replay) {
+      this.ui.setOffscreenMarker(false);
+      this.ui.setPrompt('SLOW MOTION', 'neutral');
       return;
     }
     const prediction = this.predictShotType();
@@ -2522,7 +2691,12 @@ class SunsetSlam {
         if (ev.tone === 'perfect') this.ui.flashHit();
         break;
       }
+      case 'slowmo': {
+        this.ui.showReplay();
+        break;
+      }
       case 'point': {
+        this.ui.hideReplay();
         this.ui.showPointBanner({ kicker: ev.kicker, title: ev.title, reason: ev.reason, tone: ev.tone });
         this.ui.flashPoint();
         this.audio.playPoint(ev.winner);
@@ -2646,6 +2820,7 @@ class SunsetSlam {
       this.updateRival(dt);
       this.updateServe(dt);
       this.ball.update(dt);
+      this.recordReplayFrame();
       this.processBallEvents();
       this.updateCharacters(dt, this.player.vel.length(), this.rival.vel.length());
       this.world.update(realDt, this.elapsed);
@@ -2659,6 +2834,7 @@ class SunsetSlam {
       this.updatePlayerMovement(dt);
       this.updateRival(dt);
       this.ball.update(dt);
+      this.recordReplayFrame();
       this.processBallEvents();
       if (this.phase === 'rally' && this.ball.mode === 'dead') {
         // Safety net for weird trajectories: resolve a dead ball at the net.
@@ -2672,8 +2848,8 @@ class SunsetSlam {
     }
 
     if (this.phase === 'point') {
-      this.updatePoint(dt);
-      this.ball.update(dt);
+      const replaying = this.updatePoint(dt);
+      if (!replaying) this.ball.update(dt);
       this.ball.events.length = 0;
       this.world.update(realDt, this.elapsed);
       this.updateCamera(realDt);

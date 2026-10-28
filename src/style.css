@@ -2765,3 +2765,94 @@ body.is-reduced-motion *::after {
     justify-content: flex-start;
   }
 }
+
+
+/* ─────────────────────────────────────────────────────────────
+   POINT REPLAY / SLOW MOTION
+   ───────────────────────────────────────────────────────────── */
+.replay-badge {
+  position: absolute;
+  top: calc(var(--safe-top) + 104px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: rgba(4, 16, 26, 0.82);
+  border: 1px solid rgba(255, 211, 110, 0.55);
+  color: var(--sun);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  z-index: 16;
+  opacity: 1;
+}
+
+.replay-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 10px rgba(255, 104, 70, 0.8);
+  animation: livePulse 1s infinite;
+}
+
+.cinema-bars {
+  position: fixed;
+  inset: 0;
+  z-index: 14;
+  pointer-events: none;
+  display: none;
+}
+
+body.is-replay .cinema-bars {
+  display: block;
+}
+
+.cinema-bars span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 9vh;
+  background: #040b13;
+  opacity: 1;
+}
+
+.cinema-bars span:first-child { top: 0; }
+.cinema-bars span:last-child { bottom: 0; }
+
+@keyframes barsIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+body.is-replay .hud-top,
+body.is-replay .hud-bottom {
+  opacity: 0.25;
+  transition: opacity 0.3s ease;
+}
+
+body.is-replay .aim-layer {
+  opacity: 0;
+}
+
+body.is-replay .replay-badge {
+  top: calc(var(--safe-top) + 9vh + 16px);
+}
+
+/* hand-side cue sits inside the auto-shot chip */
+.shot-chip .hand-side {
+  color: var(--mint);
+}
+
+@media (max-width: 720px) {
+  .replay-badge {
+    top: calc(var(--safe-top) + 84px);
+    font-size: 8px;
+  }
+  body.is-replay .cinema-bars span {
+    height: 7vh;
+  }
+}

@@ -78,6 +78,8 @@ export class UI {
       rematchBtn: $('rematch-btn'),
       titleBtn: $('title-btn'),
       offScreenMarker: $('off-screen-marker'),
+      replayBadge: $('replay-badge'),
+      cinemaBars: $('cinema-bars'),
       lobbyScreen: $('lobby-screen'),
       lobbyKicker: $('lobby-kicker'),
       lobbyTitle: $('lobby-title'),
@@ -381,8 +383,9 @@ export class UI {
     if (this.el.autoShot && this.el.autoShot.textContent !== shot) {
       this.el.autoShot.textContent = shot;
     }
-    if (this.el.autoHand && this.el.autoHand.textContent !== hand) {
-      this.el.autoHand.textContent = hand;
+    const handText = hand === 'BACKHAND' ? '◀ BACKHAND' : hand === 'FOREHAND' ? 'FOREHAND ▶' : hand;
+    if (this.el.autoHand && this.el.autoHand.textContent !== handText) {
+      this.el.autoHand.textContent = handText;
     }
     this.el.reticle?.classList.toggle('is-ready', ready);
     this.el.reticle?.classList.toggle('is-danger', danger);
@@ -458,6 +461,17 @@ export class UI {
   hideBanners() {
     this.hidePointBanner();
     this.hideCountdown();
+    this.hideReplay();
+  }
+
+  showReplay() {
+    this.el.replayBadge?.removeAttribute('hidden');
+    document.body.classList.add('is-replay');
+  }
+
+  hideReplay() {
+    this.el.replayBadge?.setAttribute('hidden', '');
+    document.body.classList.remove('is-replay');
   }
 
   _updateBannerState() {

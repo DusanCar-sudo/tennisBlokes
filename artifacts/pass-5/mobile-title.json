@@ -1,0 +1,138 @@
+{
+  "url": "http://127.0.0.1:4173/",
+  "mode": "mobile",
+  "state": "title",
+  "requestedState": "title",
+  "appliedState": "title",
+  "runId": "pass-5",
+  "seed": 42,
+  "screenshotPath": "artifacts/pass-5/mobile-title.png",
+  "gpu": {
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "vendor": "Google Inc. (Google)",
+    "softwareRendered": true
+  },
+  "result": {
+    "ok": true,
+    "reason": "nonblank",
+    "rect": {
+      "x": 0,
+      "y": 0,
+      "width": 390,
+      "height": 664
+    },
+    "drawingBuffer": {
+      "width": 585,
+      "height": 996
+    },
+    "alphaPixels": 4111,
+    "variance": 253,
+    "colorBuckets": 216,
+    "metrics": {
+      "colorBuckets": 311,
+      "colorEntropyBits": 5.91,
+      "edgeDensity": 0.34,
+      "luminance": {
+        "mean": 66.5,
+        "p5": 12.9,
+        "p95": 205,
+        "contrast": 192.1
+      },
+      "dominantColorShare": 0.083,
+      "nonBackgroundShare": 0.917
+    },
+    "renderBudget": {
+      "tier": "mobile",
+      "note": "starting-point budget; adjust per game and document overrides",
+      "rows": [
+        {
+          "metric": "calls",
+          "actual": 181,
+          "limit": 150,
+          "ok": false
+        },
+        {
+          "metric": "triangles",
+          "actual": 128452,
+          "limit": 300000,
+          "ok": true
+        },
+        {
+          "metric": "geometries",
+          "actual": 177,
+          "limit": 200,
+          "ok": true
+        },
+        {
+          "metric": "textures",
+          "actual": 15,
+          "limit": 40,
+          "ok": true
+        }
+      ],
+      "withinBudget": false
+    },
+    "diagnostics": {
+      "frame": 1,
+      "phase": "title",
+      "paused": false,
+      "screenshotPaused": true,
+      "mobile": true,
+      "score": {
+        "player": 0,
+        "rival": 0,
+        "playerLabel": "0",
+        "rivalLabel": "0",
+        "meta": "FIRST TO 4"
+      },
+      "rally": 0,
+      "longestRally": 0,
+      "matchWinner": null,
+      "matchPoint": false,
+      "ball": {
+        "mode": "hidden",
+        "position": [
+          0,
+          1.2,
+          5
+        ],
+        "speed": 0
+      },
+      "player": {
+        "position": [
+          1.55,
+          0,
+          7
+        ]
+      },
+      "rival": {
+        "position": [
+          -1.25,
+          0,
+          -8
+        ]
+      },
+      "camera": {
+        "position": [
+          7.9,
+          4.25,
+          16.85
+        ],
+        "fov": 52
+      },
+      "renderer": {
+        "calls": 181,
+        "triangles": 128452,
+        "points": 450,
+        "lines": 76,
+        "geometries": 177,
+        "textures": 15
+      },
+      "autoShotEnabled": true
+    }
+  },
+  "consoleErrors": [],
+  "pageErrors": [],
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0
+}
