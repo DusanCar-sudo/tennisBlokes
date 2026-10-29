@@ -165,6 +165,7 @@ class SunsetSlam {
     this.recordBuffer = [];         // rolling rally recording
     this.replay = null;             // active replay state
     this.pendingPoint = null;       // point result waiting for replay
+    this.pendingSwing = null;       // buffered click on an approaching ball
     this.lastNetStatus = null;
     this.snapshot = null;
     this.snapshotPrev = null;
@@ -925,6 +926,7 @@ class SunsetSlam {
   }
 
   beginServe(server) {
+    this.pendingSwing = null;
     this.recordBuffer.length = 0;
     this.pendingPoint = null;
     this.ui.hideReplay();
@@ -1066,13 +1068,75 @@ class SunsetSlam {
 
   // ───────────────────────── input → actions ─────────────────────────
 
+  // True when a click made now is "early" — the ball is on this athlete's side,
+  // closing fast, and will be within racket reach shortly. Such clicks are
+  // buffered so the natural rhythm (click as you see the bounce) always lands.
+  shouldBufferSwing() {
+    const b = this.ball;
+    if (!b || b.mode !== 'flight' || this.phase !== 'rally') return false;
+    if (b.pos.z <= 0.05) return false;
+    const d = horizontalDistance(b.pos, this.player.pos);
+    if (d > 8.2) return false;
+    const dx = this.player.pos.x - b.pos.x;
+    const dz = this.player.pos.z - b.pos.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const closing = (b.vel.x * dx + b.vel.z * dz) / len;
+    if (closing < 0.35) return false;
+    const gap = Math.max(0, d - TUNING.playerReach);
+    return gap / closing <= 0.8;
+  }
+
+  bufferSwing() {
+    if (this.pendingSwing) return;
+    this.pendingSwing = { t: 0.85 };
+    this.ui.setPrompt('WAITING FOR IT…', 'ready');
+    this.player.swingCooldown = 0;
+  }
+
+  // Fires the buffered swing the moment the ball is playable.
+  updatePendingSwing(dt) {
+    if (!this.pendingSwing) return;
+    this.pendingSwing.t -= dt;
+    const b = this.ball;
+    if (this.phase !== 'rally' || !b || b.mode !== 'flight' || b.pos.z < -0.05) {
+      this.pendingSwing = null;
+      return;
+    }
+    const horizontal = horizontalDistance(b.pos, this.player.pos);
+    // Same reach window as a direct hit, including the catch-assist lunge:
+    // a click at the bounce should convert even for balls just off the racket.
+    if (horizontal <= TUNING.playerReach + 0.85 && b.pos.y < 3.45 && b.pos.y > 0.02) {
+      this.pendingSwing = null;
+      if (horizontal > TUNING.playerReach + 0.08) {
+        const dx = b.pos.x - this.player.pos.x;
+        const dz = b.pos.z - this.player.pos.z;
+        const len = Math.hypot(dx, dz) || 1;
+        const step = Math.min(0.85, Math.max(0, horizontal - TUNING.playerReach + 0.35));
+        this.player.pos.x = clamp(this.player.pos.x + (dx / len) * step, -PLAYER_BOUNDS.x, PLAYER_BOUNDS.x);
+        this.player.pos.z = clamp(this.player.pos.z + (dz / len) * step, PLAYER_BOUNDS.zMin, PLAYER_BOUNDS.zMax);
+      }
+      this.strikeBall(b.pos.clone());
+      return;
+    }
+    if (this.pendingSwing.t <= 0) {
+      this.pendingSwing = null;
+      this.ui.setPrompt('JUST MISSED IT', 'warning');
+    }
+  }
+
   attemptHit(source = 'mouse') {
     if (!this.isActiveMatch() || this.paused || this.screenshotPaused) return;
     if (this.netMode === 'guest') {
-      // Host is authoritative: forward the request, everything else happens
-      // there and comes back as snapshot/event traffic.
-      this.guestInput.hitSeq += 1;
-      this.net.sendInput({ h: this.guestInput.hitSeq });
+      // Host is authoritative. Buffer early clicks locally (LAN latency makes
+      // "click at the bounce" even earlier on the far screen) and release the
+      // request only once the ball is playable.
+      const info = this.getHitInfo();
+      if (info.ready || !this.shouldBufferSwing()) {
+        this.guestInput.hitSeq += 1;
+        this.net.sendInput({ h: this.guestInput.hitSeq });
+      } else {
+        this.bufferSwing();
+      }
       return;
     }
     if (this.phase === 'intro') return;
@@ -1114,6 +1178,12 @@ class SunsetSlam {
       );
     }
     if (horizontal > TUNING.playerReach + 0.08) {
+      // Clicked early on a ball that is still closing in → buffer it instead
+      // of a doomed whiff (which also used to eat the next click's cooldown).
+      if (this.shouldBufferSwing()) {
+        this.bufferSwing();
+        return;
+      }
       const shot = this.selectShotType(contact);
       this.playerCharacter.triggerSwing(shot.type, shot.hand);
       this.player.swingCooldown = TUNING.swingCooldown * 0.78;
@@ -2035,6 +2105,7 @@ class SunsetSlam {
     const playerWon = winner === 'player';
     const matchWon = this.isMatchWon();
     this.phase = 'point';
+    this.pendingSwing = null;
     this.pointTimer = TUNING.pointBannerTime;
     this.player.vel.set(0, 0, 0);
     this.rival.vel.set(0, 0, 0);
@@ -2618,6 +2689,21 @@ class SunsetSlam {
     this.ball.setShotColor(snap.b.c);
     this.ball.trail.visible = false;
 
+    // Release a locally buffered click once this snapshot shows the ball
+    // playable (the host still validates the hit against what we saw).
+    if (this.pendingSwing) {
+      this.pendingSwing.t -= dt;
+      const info = this.getHitInfo();
+      if (this.phase === 'rally' && info.ready) {
+        this.pendingSwing = null;
+        this.guestInput.hitSeq += 1;
+        this.net.sendInput({ h: this.guestInput.hitSeq });
+      } else if (this.pendingSwing.t <= 0 || this.phase !== 'rally') {
+        this.pendingSwing = null;
+        this.ui.setPrompt('JUST MISSED IT', 'warning');
+      }
+    }
+
     this.guestSnapSq = snap.sq ?? this.guestSnapSq;
     this.phase = snap.ph;
     this.server = snap.sv;
@@ -2820,6 +2906,7 @@ class SunsetSlam {
       this.updateRival(dt);
       this.updateServe(dt);
       this.ball.update(dt);
+      this.updatePendingSwing(dt);
       this.recordReplayFrame();
       this.processBallEvents();
       this.updateCharacters(dt, this.player.vel.length(), this.rival.vel.length());
@@ -2834,6 +2921,7 @@ class SunsetSlam {
       this.updatePlayerMovement(dt);
       this.updateRival(dt);
       this.ball.update(dt);
+      this.updatePendingSwing(dt);
       this.recordReplayFrame();
       this.processBallEvents();
       if (this.phase === 'rally' && this.ball.mode === 'dead') {

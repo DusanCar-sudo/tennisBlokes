@@ -117,7 +117,10 @@ your aim, then announces the shot on the HUD chip and colors the reticle:
 - **Start of the point** → auto SERVE
 
 Timing is the skill: the contact rating (PERFECT / GOOD / LATE / STRETCH)
-scales power and precision. Laki the rival errs under stretch and long rallies,
+scales power and precision. Clicks are **buffered**: pressing HIT as the ball
+bounces (the natural rhythm) arms the swing and it fires automatically the
+instant the ball reaches your racket, so a well-timed-but-early click is never
+wasted. Laki the rival errs under stretch and long rallies,
 so points end through winners *and* mistakes.
 
 ## Point replay — slow motion

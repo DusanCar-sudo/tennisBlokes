@@ -291,3 +291,32 @@ Verified (`scripts/features-test.mjs`, `scripts/replay-natural.mjs`):
   reaply → next point, zero console errors
 - pass-5 canvas inspector: **7/7 PASS** (same metrics as pass-4; mobile draw
   calls documented tradeoff unchanged)
+
+
+## Update 6 — click buffer (bounce-timing fix)
+
+Reported: "when the ball bounces and I click then/after, it always misses."
+
+Root cause: the hit window only accepted clicks when the ball was already
+inside racket reach (< 2.45 m). A click at the bounce moment is early by
+0.2–0.6 s, so it played a whiff swing, set a 0.27 s cooldown (which could also
+swallow the next click), and never registered. Reproduced deterministically:
+click at bounce with the ball 5.4 m away → swing + cooldown, no strike.
+
+Fix — input buffering:
+
+- a click while the ball is on your side, closing at ≥ 0.35 m/s and due to
+  arrive within ~0.8 s arms a buffered swing instead of whiffing
+  (`shouldBufferSwing` / `bufferSwing`)
+- the buffered swing auto-fires from `updatePendingSwing` the moment the ball
+  is inside the full catch-assist reach window (reach + 0.85 m), including the
+  auto-lunge, or expires with a "JUST MISSED IT" prompt
+- no cooldown and no wasted swing animation on a buffered click
+- LAN guests buffer locally too: their early clicks are held until their
+  snapshot shows the ball playable, then the hit request is sent (host still
+  validates with lag compensation)
+
+Verified: click-at-bounce bot with lateral chase — 3 clicks, 3 hits (2 via
+buffer, 1 direct); buffered strike fires 0.39 s after an early click with the
+ball 5.4 m away; full features + two-browser PvP regressions pass with zero
+console errors.
