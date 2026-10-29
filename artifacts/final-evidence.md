@@ -344,3 +344,33 @@ prompts) into the lower-left corner and leave the rest of the screen empty.
 - pass-6 canvas inspector: **7/7 PASS** (entropy 6.7–6.8 on active play,
   contrast 182–192, desktop draw calls within budget).
 - LAN PvP regression: guest hit + score sync pass with the new HUD.
+
+
+## Update 8 — mobile viewport clipping + joystick moves the body
+
+Reported on a real phone: the page was cut off at the bottom (controls
+clipped), and the joystick appeared to move the camera instead of the body.
+
+Root causes and fixes:
+
+- **Clipping:** the app sized itself with the layout viewport (`100vh` /
+  `window.innerHeight`), which on phones is taller than the visible area while
+  browser toolbars are shown. The app now sizes from the *visible* viewport:
+  CSS `height: var(--app-h)` measured from `visualViewport` in JS (fallbacks
+  `100dvh` → `100vh`), re-measured on resize, `visualViewport` resize/scroll
+  and orientation change. Renderer sizing reads the canvas CSS box.
+- **Touch controls** are anchored with safe-area insets, enlarged (132px
+  joystick, labelled RUN), layered above the aim zone, and never scroll the
+  page (`touch-action: none`, `overscroll-behavior: none`).
+- **Joystick → body:** verified wired to movement, not the camera. If a touch
+  arrives while the game thinks it's in desktop mode (e.g. "request desktop
+  site"), it now auto-switches to touch controls.
+- A stale/incorrect `mobile` flag could leave the joystick inert; detection is
+  now consistent (coarse pointer OR touch points OR narrow width) and
+  re-applied on resize.
+
+Verified with real touch events (CDP) across four profiles — Pixel 7,
+iPhone SE, iPhone 14 Pro Max, Pixel 7 landscape: controls fully inside the
+viewport, canvas matches the visible height, no page scroll, joystick drag
+moves the athlete 1.8–3.0 m with **zero camera yaw change**, right-side drag
+rotates the camera, zero console errors.

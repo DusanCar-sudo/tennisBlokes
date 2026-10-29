@@ -79,6 +79,11 @@ validation uses the state Laki actually saw.
 
 ## Controls
 
+On a phone: the **RUN** joystick (bottom-left) moves the athlete, dragging the
+right side of the screen aims the camera, and the **HIT** button plays the
+auto-chosen shot. Controls sit inside the visible viewport (dynamic viewport
+height + safe-area insets), so phone browser toolbars never clip them.
+
 | Input | Action |
 | --- | --- |
 | `W A S D` / left stick | Move (camera-relative) |

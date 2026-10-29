@@ -537,6 +537,9 @@ class SunsetSlam {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', () => this.clearInputs());
     window.addEventListener('resize', this.onResize);
+    window.visualViewport?.addEventListener('resize', this.onResize);
+    window.visualViewport?.addEventListener('scroll', this.onResize);
+    window.addEventListener('orientationchange', () => window.setTimeout(this.onResize, 260));
     window.addEventListener('orientationchange', () => {
       window.setTimeout(this.onResize, 220);
     });
@@ -554,6 +557,14 @@ class SunsetSlam {
     this.canvas.addEventListener('click', () => {
       if (!this.isActiveMatch() || this.paused || this.mobile) return;
       if (!this.pointerLocked) this.requestPointerLock();
+    });
+    this.canvas.addEventListener('pointerdown', (event) => {
+      if (!this.mobile && event.pointerType === 'touch') {
+        // A real touch arrived while we were in desktop mode (e.g. "request
+        // desktop site") — switch to touch controls instead of mouse aiming.
+        this.mobile = true;
+        this.ui._initViewportMode();
+      }
     });
 
     const joystickZone = document.getElementById('joystick-zone');
@@ -3034,9 +3045,15 @@ class SunsetSlam {
 
   onResize() {
     if (!this.renderer || !this.camera) return;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    this.mobile = isCoarsePointer() || width <= 900;
+    // Measure the *visible* viewport (visualViewport excludes phone browser
+    // toolbars) and expose it as --app-h; CSS falls back to 100dvh/100vh.
+    const vv = window.visualViewport;
+    const visibleH = Math.round(vv?.height ?? window.innerHeight);
+    const visibleW = Math.round(vv?.width ?? window.innerWidth);
+    document.documentElement.style.setProperty('--app-h', `${visibleH}px`);
+    const width = this.canvas?.clientWidth || visibleW;
+    const height = this.canvas?.clientHeight || visibleH;
+    this.mobile = isCoarsePointer() || width <= 900 || window.innerWidth <= 900;
     const dprCap = this.mobile ? 1.5 : 2;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
     this.renderer.setSize(width, height, false);
