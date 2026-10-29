@@ -831,7 +831,7 @@ export class Hoops {
         this.dribbleHold = fast ? this.dribbleHold + dt : 0;
         if (this.dribbleHold > 1.15) {
           this.dribbleHold = 0;
-          this.turnover(this.possession, 'TRAVELING');
+          this.turnover(this.possession === 'player' ? 'rival' : 'player', 'TRAVELING');
         }
       }
 
