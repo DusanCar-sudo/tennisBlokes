@@ -185,6 +185,17 @@ class SunsetSlam {
   }
 
   async init() {
+    // ?sport=basket preselects basketball on the title screen.
+    const urlSport = new URLSearchParams(window.location.search).get('sport');
+    if (urlSport === 'basket' || urlSport === 'basketball') {
+      this.sport = 'basket';
+      window.setTimeout(() => {
+        document.getElementById('sport-basket')?.classList.add('is-active');
+        document.getElementById('sport-tennis')?.classList.remove('is-active');
+        const tagline = document.querySelector('.title-tagline');
+        if (tagline) tagline.innerHTML = 'One basket. One rival.<br /><strong>First to 11 wins.</strong>';
+      }, 0);
+    }
     this.mobile = isCoarsePointer() || window.innerWidth <= 900;
     this.initRenderer();
     this.scene = new THREE.Scene();
