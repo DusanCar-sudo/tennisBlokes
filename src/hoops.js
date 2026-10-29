@@ -824,17 +824,6 @@ export class Hoops {
         }
       }
 
-      // Traveling: sprinting with the ball unpumped is a violation.
-      if (this.possession && g.ball.mode === 'held') {
-        const carrier = this.possession === 'player' ? g.player : g.rival;
-        const fast = carrier.vel.length() > TUNING.playerSpeed * 1.06;
-        this.dribbleHold = fast ? this.dribbleHold + dt : 0;
-        if (this.dribbleHold > 1.15) {
-          this.dribbleHold = 0;
-          this.turnover(this.possession === 'player' ? 'rival' : 'player', 'TRAVELING');
-        }
-      }
-
       // Charging: gauge fills; green zone marks the ideal release.
       if (this.charging) {
         this.charge = clamp(this.charge + dt / 0.95, 0, 1);
