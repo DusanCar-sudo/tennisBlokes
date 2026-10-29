@@ -449,3 +449,29 @@ Verified:
 - mobile (Pixel 7, real touch): joystick runs the athlete, HIT button shoots
   (THREE attempted from deep), zero errors
 - tennis regression: full point flow intact, basketball court fully removed
+
+
+## Update 11 — real basketball players (Nuggets Jokić kits, no rackets)
+
+Feedback: the basketball athletes were still tennis players (rackets, caps)
+and the camera/player felt detached.
+
+- **Rackets removed** in basketball (`rig.racket.visible = false`); caps and
+  headbands come off too — replaced by nothing but a ball in the hands.
+- **Denver Nuggets kits** (researched official palette: navy `#002D62`,
+  gold `#FDB827`, sky `#4B90CD` — Nuggets are one of the few NBA teams with
+  a documented navy/gold identity): DUKA wears the navy **Icon edition**,
+  LAKI the white **Association edition**; both say **JOKIĆ 15** on the back
+  via the regenerated jersey texture (gold on navy, navy on white). Kits are
+  applied per-match (`setKit`) and fully restore on returning to tennis.
+- **Real basketball**: pebbled orange leather texture with black seams on
+  the ball (the tennis-seam map is swapped out).
+- **Fortnite camera lock**: in basketball the athlete's yaw snaps to the
+  camera yaw every frame (no damp lag) and the camera follow stiffness
+  doubles (lambda 26) — rotating the view rotates you both as one unit.
+- Tennis mode unchanged (rackets and kits restored, verified).
+
+Verified: kit colors applied (navy `#0c2f52` / white `#f2f0ea`), rackets and
+headwear hidden, seam texture on the ball, yaw snaps exactly to target
+(0.9 aim → −0.9 rotation, one frame), free-throw still scores, tennis
+regression green, zero errors.

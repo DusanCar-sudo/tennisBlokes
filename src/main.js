@@ -62,6 +62,35 @@ const RIVAL_COLORS = {
   scale: 1.02,
 };
 
+// Denver Nuggets kits (Jokic #15) — navy Icon edition for the home side,
+// white Association edition for the guest side. Navy 002D62, gold FDB827.
+const NUGGETS_HOME = {
+  shirt: 0x0c2f52,
+  shirtShade: 0x081f38,
+  shorts: 0x061a30,
+  trim: 0xfdb827,
+  accent: 0xfdb827,
+  accentColor: '#fdb827',
+  number: 15,
+  name: 'JOKIC',
+  headwear: false,
+  racket: false,
+};
+const NUGGETS_AWAY = {
+  shirt: 0xf2f0ea,
+  shirtShade: 0xd8d4c8,
+  shorts: 0xf2f0ea,
+  trim: 0x002d62,
+  accent: 0x4b90cd,
+  accentColor: '#0c2f52',
+  number: 15,
+  name: 'JOKIC',
+  headwear: false,
+  racket: false,
+};
+const TENNIS_KIT_PLAYER = { racket: true, headwear: true };
+const TENNIS_KIT_RIVAL = { racket: true, headwear: true };
+
 const PLAYER_TITLE_POS = new THREE.Vector3(1.55, 0, 7.0);
 const RIVAL_TITLE_POS = new THREE.Vector3(-1.25, 0, -8.0);
 const HOME_PLAYER = new THREE.Vector3(-0.75, 0, 10.7);
@@ -957,8 +986,24 @@ class SunsetSlam {
 
   // ───────────────────────── match lifecycle ─────────────────────────
 
+  applyTennisKits() {
+    this.dukaCharacter.setKit({
+      shirt: PLAYER_COLORS.shirt, shirtShade: PLAYER_COLORS.shirtShade,
+      shorts: PLAYER_COLORS.shorts, trim: 0xf8f1de, accent: PLAYER_COLORS.accent,
+      accentColor: PLAYER_COLORS.accentColor, number: PLAYER_COLORS.number,
+      name: PLAYER_COLORS.name, headwear: true, racket: true,
+    });
+    this.lakiCharacter.setKit({
+      shirt: RIVAL_COLORS.shirt, shirtShade: RIVAL_COLORS.shirtShade,
+      shorts: RIVAL_COLORS.shorts, trim: 0xf8f1de, accent: RIVAL_COLORS.accent,
+      accentColor: RIVAL_COLORS.accentColor, number: RIVAL_COLORS.number,
+      name: RIVAL_COLORS.name, headwear: true, racket: true,
+    });
+  }
+
   resetToTitle() {
     if (this.hoops) { this.hoops.dispose(); this.hoops = null; }
+    this.applyTennisKits();
     this.sport = this.urlSport || 'tennis';
     delete this.scoreLabels;
     delete this.isMatchWon;
@@ -1038,6 +1083,7 @@ class SunsetSlam {
       return;
     }
     if (this.hoops) { this.hoops.dispose(); this.hoops = null; }
+    this.applyTennisKits();
     delete this.scoreLabels;
     delete this.isMatchWon;
     delete this.wouldWinNextPoint;
@@ -1156,6 +1202,9 @@ class SunsetSlam {
     this.isMatchWon = () => this.hoops?.matchWon() ?? false;
     this.wouldWinNextPoint = () => this.hoops?.wouldWinNext() ?? false;
     if (this.hoops) this.hoops.dispose();
+    // Nuggets skins: navy Icon (home) vs white Association (guest).
+    this.dukaCharacter.setKit(NUGGETS_HOME);
+    this.lakiCharacter.setKit(NUGGETS_AWAY);
     this.hoops = new Hoops(this);
     this.hoops.begin();
     this.ui.showCountdown({ kicker: 'BASKETBALL 1V1', value: 'CHECK', sub: 'FIRST TO 11' });
@@ -2097,12 +2146,18 @@ class SunsetSlam {
     const incomingHand = this.getIncomingHand();
     const playerFacing = -this.aimYaw;
     const targetYaw = playerFacing;
-    this.playerCharacter.root.rotation.y = damp(
-      this.playerCharacter.root.rotation.y,
-      targetYaw,
-      16,
-      dt
-    );
+    if (this.sport === 'basket') {
+      // Fortnite-style lock: the athlete turns WITH the camera as one unit —
+      // no lag, no independent facing while aiming.
+      this.playerCharacter.root.rotation.y = targetYaw;
+    } else {
+      this.playerCharacter.root.rotation.y = damp(
+        this.playerCharacter.root.rotation.y,
+        targetYaw,
+        16,
+        dt
+      );
+    }
     this.playerCharacter.root.position.copy(this.player.pos);
 
     const forwardP = new THREE.Vector3(Math.sin(this.aimYaw), 0, -Math.cos(this.aimYaw));
@@ -2604,8 +2659,9 @@ class SunsetSlam {
       desired = new THREE.Vector3(-localPose.x, localPose.y, -localPose.z);
       direction = new THREE.Vector3(-localDir.x, localDir.y, -localDir.z);
     }
+    const camLambda = this.sport === 'basket' ? 26 : 12;
     if (immediate) this.camera.position.copy(desired);
-    else this.camera.position.lerp(desired, 1 - Math.exp(-12 * dt));
+    else this.camera.position.lerp(desired, 1 - Math.exp(-camLambda * dt));
     this.camera.position.y = Math.max(this.camera.position.y, 0.7);
 
     const lookAt = this.camera.position.clone().addScaledVector(direction, 32);

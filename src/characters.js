@@ -506,6 +506,9 @@ export function createCharacter(config) {
   hairCap.rotation.x = -0.08;
   head.add(hairCap);
 
+  const headwear = new THREE.Group();
+  headwear.name = 'headwear';
+  head.add(headwear);
   if (cap) {
     const capCrown = new THREE.Mesh(
       new THREE.SphereGeometry(0.126, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.54),
@@ -514,7 +517,7 @@ export function createCharacter(config) {
     capCrown.scale.y = 0.8;
     capCrown.position.y = 0.034;
     capCrown.castShadow = true;
-    head.add(capCrown);
+    headwear.add(capCrown);
     const brimShape = new THREE.Shape();
     brimShape.absarc(0, 0, 0.17, 0, Math.PI, false);
     const brimGeo = new THREE.ExtrudeGeometry(brimShape, {
@@ -526,13 +529,13 @@ export function createCharacter(config) {
     const brim = new THREE.Mesh(brimGeo, materials.accent);
     brim.position.set(0, 0.04, 0.015);
     brim.castShadow = true;
-    head.add(brim);
+    headwear.add(brim);
     const button = new THREE.Mesh(
       new THREE.SphereGeometry(0.017, 8, 6),
       materials.accent
     );
     button.position.y = 0.16;
-    head.add(button);
+    headwear.add(button);
   }
 
   if (headband) {
@@ -542,7 +545,7 @@ export function createCharacter(config) {
     );
     band.rotation.x = Math.PI / 2;
     band.position.y = 0.026;
-    head.add(band);
+    headwear.add(band);
     const knot = new THREE.Mesh(
       new THREE.BoxGeometry(0.045, 0.04, 0.03),
       materials.accent
@@ -725,6 +728,7 @@ export function createCharacter(config) {
     hips,
     torso,
     head,
+    headwear,
     arms: { left, right },
     legs: { left: leftLeg, right: rightLeg },
     racket,
@@ -770,6 +774,27 @@ export class TennisCharacter {
 
   triggerReaction(kind = 'win') {
     this.reaction = { kind, elapsed: 0, duration: kind === 'win' ? 1.35 : 1.1 };
+  }
+
+  // Re-skin the athlete without rebuilding the rig: kit colors, jersey
+  // name/number, and sport gear (racket hidden for basketball, no caps).
+  setKit(kit) {
+    const m = this.rig.materials;
+    if (kit.shirt != null) m.shirt.color.set(kit.shirt);
+    if (kit.shirtShade != null) m.shirtShade.color.set(kit.shirtShade);
+    if (kit.shorts != null) m.shorts.color.set(kit.shorts);
+    if (kit.trim != null) m.trim.color.set(kit.trim);
+    if (kit.accent != null) m.accent.color.set(kit.accent);
+    if (kit.number != null && kit.name != null) {
+      const tex = makeJerseyBackTexture(kit.number, kit.name, kit.accentColor || '#f8f1de');
+      this.rig.numberPlane.material.map = tex;
+      this.rig.jerseyTexture = tex;
+      this.rig.numberPlane.material.needsUpdate = true;
+    }
+    if (kit.headwear === false) this.rig.headwear.visible = false;
+    else if (kit.headwear === true) this.rig.headwear.visible = true;
+    if (kit.racket === false) this.rig.racket.visible = false;
+    else if (kit.racket === true) this.rig.racket.visible = true;
   }
 
   getRacketWorldPosition(target = new THREE.Vector3()) {

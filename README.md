@@ -203,6 +203,13 @@ artifacts/            Evidence passes (screenshots, reports, motion video)
 
 ## BASKETBALL 1v1
 
+Both athletes wear **Denver Nuggets Jokić #15 kits** — you in the navy Icon
+edition, Laki in the white Association edition (navy `#0C2F52`, gold `#FDB827`,
+per the official Nuggets palette). No rackets, no caps: basketball players,
+basketball ball (pebbled orange leather with black seams). The camera and the
+athlete turn as one unit, Fortnite-style — aim rotates you both together.
+
+
 Pick **BASKETBALL** on the title screen. Half-court, one basket, DUKA vs
 LAKI (CPU or another player over the network): first to 11, win by 2.
 

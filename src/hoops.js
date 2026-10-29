@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { clamp, damp } from './utils.js';
 import { TUNING } from './config.js';
+import { makeBasketballTexture } from './textures.js';
 
 export const HOOPS = {
   rimCenter: new THREE.Vector3(0, 3.05, -12.16),
@@ -150,12 +151,13 @@ export class Hoops {
     game.world.court.group.visible = false;
     game.world.net.group.visible = false;
 
-    // Orange basketball on the shared ball mesh.
+    // Proper basketball: orange pebbled leather with black seams.
     const mesh = game.ball.mesh;
     this._savedMap = mesh.material.map;
     this._savedColor = mesh.material.color.clone();
-    mesh.material.map = null;
-    mesh.material.color.set(0xe07b34);
+    this._basketTex = makeBasketballTexture();
+    mesh.material.map = this._basketTex;
+    mesh.material.color.set(0xffffff);
     mesh.material.needsUpdate = true;
     mesh.scale.setScalar(1.18);
 
@@ -183,6 +185,7 @@ export class Hoops {
     });
     this.g.world.court.group.visible = true;
     this.g.world.net.group.visible = true;
+    this._basketTex?.dispose?.();
     const mesh = this.g.ball.mesh;
     mesh.material.map = this._savedMap;
     mesh.material.color.copy(this._savedColor);

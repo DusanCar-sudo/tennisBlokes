@@ -365,6 +365,26 @@ export function makeJerseyBackTexture(number, name, accent = '#fff5e6') {
   return finishTexture(canvas, { colorSpace: THREE.SRGBColorSpace });
 }
 
+export function makeBasketballTexture() {
+  const { canvas, ctx } = makeCanvas(256, 256);
+  ctx.fillStyle = '#d9762e';
+  ctx.fillRect(0, 0, 256, 256);
+  // subtle pebbled grain
+  for (let i = 0; i < 900; i += 1) {
+    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)';
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  ctx.strokeStyle = '#231408';
+  ctx.lineWidth = 5;
+  // vertical + horizontal seams
+  ctx.beginPath(); ctx.moveTo(128, 0); ctx.lineTo(128, 256); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, 128); ctx.lineTo(256, 128); ctx.stroke();
+  // two curved side seams
+  ctx.beginPath(); ctx.moveTo(34, -10); ctx.quadraticCurveTo(96, 128, 34, 266); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(222, -10); ctx.quadraticCurveTo(160, 128, 222, 266); ctx.stroke();
+  return finishTexture(canvas, { colorSpace: THREE.SRGBColorSpace });
+}
+
 export function makeNumberTexture(number, accent = '#fff5e6') {
   const { canvas, ctx } = makeCanvas(256, 256);
   ctx.clearRect(0, 0, 256, 256);
