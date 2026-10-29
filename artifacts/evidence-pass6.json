@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "runId": "pass-6",
+  "captures": [
+    { "mode": "desktop", "state": "title", "report": "artifacts/pass-6/desktop-title.json" },
+    { "mode": "desktop", "state": "active-play", "report": "artifacts/pass-6/desktop-active-play.json" },
+    { "mode": "desktop", "state": "serve", "report": "artifacts/pass-6/desktop-serve.json" },
+    { "mode": "desktop", "state": "paused", "report": "artifacts/pass-6/desktop-paused.json" },
+    { "mode": "desktop", "state": "match-won", "report": "artifacts/pass-6/desktop-match-won.json" },
+    { "mode": "mobile", "state": "title", "report": "artifacts/pass-6/mobile-title.json" },
+    { "mode": "mobile", "state": "active-play", "report": "artifacts/pass-6/mobile-active-play.json" }
+  ]
+}

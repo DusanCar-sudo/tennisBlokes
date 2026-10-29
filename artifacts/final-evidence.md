@@ -320,3 +320,27 @@ Verified: click-at-bounce bot with lateral chase — 3 clicks, 3 hits (2 via
 buffer, 1 direct); buffered strike fires 0.39 s after an early click with the
 ball 5.4 m away; full features + two-browser PvP regressions pass with zero
 console errors.
+
+
+## Update 7 — corner HUD, clean screen
+
+Requested: move the dashboard writings (score, shot type, point, names,
+prompts) into the lower-left corner and leave the rest of the screen empty.
+
+- All readouts now live in one compact cluster at bottom-left: score row
+  (DUKA – LAKI, serve pips, tiebreak label, state), shot + hand
+  (`TOPSPIN ▲ BACKHAND`), rally/top speed, prompt line, hit feedback, point
+  result line, countdown line, and a slim controls footer with mute/pause.
+- Removed from the view: top scoreboard, player panel, top-right stat chips,
+  the centre shot chip & prompt, the centre hit feedback, the big centre point
+  banner, bottom-right court/session plaques and the bottom-centre auto-shot
+  explainer.
+- The aiming reticle remains at screen centre (you aim there).
+- Fixed a latent bug found while doing this: the HUD's `screenIn` entrance
+  animation could stall at opacity 0 (bit us before with the replay badge);
+  the HUD now renders instantly.
+- Mobile: the cluster moves to the top-left so the joystick and hit button
+  keep the bottom corners.
+- pass-6 canvas inspector: **7/7 PASS** (entropy 6.7–6.8 on active play,
+  contrast 182–192, desktop draw calls within budget).
+- LAN PvP regression: guest hit + score sync pass with the new HUD.

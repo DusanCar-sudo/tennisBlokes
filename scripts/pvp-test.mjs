@@ -54,7 +54,7 @@ console.log('GUEST matched');
 await waitForGame(A, '(s) => ["serve","rally","point","over"].includes(s.phase)', 180000, 'A enters serve');
 console.log('A phase:', await A.evaluate(() => window.__THREE_GAME_TEST_HOOKS__.getState().phase));
 await waitForGame(B, '(s) => s.phase === "serve"', 180000, 'B sees serve');
-const bPanel = await B.evaluate(() => document.querySelector('.player-id b')?.textContent);
+const bPanel = await B.evaluate(() => document.querySelector('.score-mate .score-name')?.textContent);
 console.log('B panel name:', bPanel, '(expect LAKI)');
 
 // Host serves when the toss is up.

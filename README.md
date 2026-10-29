@@ -104,6 +104,19 @@ you can read the ball:
 ![Backhand stance](artifacts/replay-demo/stance-backhand.png)
 ![Forehand stance](artifacts/replay-demo/stance-forehand.png)
 
+## HUD
+
+Everything lives in one compact cluster in the lower-left corner — score,
+shot type and hand, rally, speed, prompts and the point result — so the court
+stays clear and the view can breathe. The aiming reticle stays at screen
+centre where you're aiming.
+
+## Controls
+
+```
+W A S D          move
+```
+
 ## The auto-shot system
 
 You never pick a stroke. The system reads ball height, your court position and

@@ -793,7 +793,8 @@ kbd {
    ───────────────────────────────────────────────────────────── */
 .hud {
   pointer-events: none;
-  animation: screenIn 0.35s ease both;
+  opacity: 1;
+  animation: none;
 }
 
 .hud.has-banner .aim-layer {
@@ -2854,5 +2855,368 @@ body.is-replay .replay-badge {
   }
   body.is-replay .cinema-bars span {
     height: 7vh;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COMPACT CORNER HUD — all readouts live bottom-left; the court
+   stays clear. One breathing cluster, nothing floating mid-screen.
+   ───────────────────────────────────────────────────────────── */
+
+.hud::before { display: none; }
+
+.corner-hud {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left, 0px));
+  bottom: max(16px, env(safe-area-inset-bottom, 0px));
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(300px, 62vw);
+  padding: 10px 14px 9px;
+  color: var(--cream);
+  background: linear-gradient(180deg, rgba(5, 18, 28, 0.62), rgba(4, 13, 21, 0.72));
+  border-left: 2px solid rgba(91, 231, 199, 0.55);
+  border-radius: 2px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 6, 12, 0.65);
+}
+
+.corner-hud button { pointer-events: auto; }
+
+.corner-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.corner-hud .score-team {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.corner-hud .score-mate { justify-content: flex-start; text-align: left; }
+
+.corner-hud .score-name {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.corner-hud .score-points {
+  min-width: 0;
+  font-size: 21px;
+  line-height: 1;
+  color: var(--cream);
+}
+
+.corner-hud .serve-pip {
+  width: 4px;
+  height: 4px;
+  transform: translateY(-2px);
+}
+
+.corner-dash {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.corner-meta-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.corner-meta {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.corner-state {
+  color: var(--sun);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.match-point-chip {
+  width: 100%;
+  margin-top: 2px;
+  color: var(--coral);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  animation: livePulse 1.2s infinite;
+}
+
+.match-point-chip[hidden] { display: none; }
+
+.corner-shot-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.corner-shot-row .shot-auto {
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.corner-shot-row strong {
+  font-family: var(--display);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--sun);
+}
+
+.corner-shot-row #auto-hand {
+  color: var(--mint);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.corner-stat-row {
+  display: flex;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.corner-stat-row b {
+  color: var(--cream);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.corner-stat-row small {
+  font-size: 6px;
+  margin-left: 2px;
+  color: var(--muted);
+}
+
+.corner-prompt {
+  min-height: 12px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  transition: color 0.2s ease;
+}
+
+.corner-prompt.is-ready { color: var(--mint); }
+.corner-prompt.is-warning { color: var(--coral); }
+
+.corner-feedback {
+  display: none;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.corner-feedback.is-visible { display: flex; }
+
+.corner-feedback strong {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--cream);
+}
+
+.corner-feedback.is-perfect strong { color: var(--mint); }
+.corner-feedback.is-poor strong { color: var(--coral); }
+
+.corner-feedback span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.corner-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.corner-keys {
+  color: var(--muted);
+  font-size: 6.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  opacity: 0.9;
+}
+
+.corner-keys kbd {
+  padding: 1px 4px;
+  color: var(--cream);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  font-size: 6px;
+}
+
+.corner-icons {
+  display: flex;
+  gap: 2px;
+}
+
+.corner-hud .icon-button {
+  width: 24px;
+  height: 24px;
+  opacity: 0.75;
+}
+
+.corner-hud .icon-button:hover { opacity: 1; }
+
+.corner-hud .icon-button svg { width: 13px; height: 13px; }
+
+/* Point result: compact line in the corner instead of a centre overlay */
+#point-banner {
+  position: static;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 6px 8px;
+  margin-bottom: 2px;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-left: 2px solid var(--sun);
+  border-radius: 0;
+  clip-path: none;
+  backdrop-filter: none;
+  animation: pointBanner 0.42s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+
+#point-banner .point-kicker {
+  display: block;
+  color: var(--muted);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+}
+
+#point-banner .point-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+#point-banner strong {
+  font-size: 20px;
+}
+
+#point-banner .point-reason {
+  color: var(--sun);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+#point-banner.is-rival { border-left-color: var(--coral); margin-left: 0; }
+
+/* Replay badge also tucks into the corner stack */
+.replay-badge {
+  top: auto;
+  bottom: max(248px, calc(16px + 244px));
+  left: max(18px, env(safe-area-inset-left, 0px));
+  transform: none;
+  font-size: 8px;
+}
+
+body.is-replay .replay-badge { top: auto; }
+
+body.is-replay .corner-hud { opacity: 0.25; transition: opacity 0.3s ease; }
+
+body.is-replay .hud-top,
+body.is-replay .hud-bottom { opacity: 1; }
+
+/* touch/mobile: keep the cluster clear of the joystick and hit button */
+@media (max-width: 760px), (pointer: coarse) {
+  .corner-hud {
+    left: max(12px, env(safe-area-inset-left, 0px));
+    bottom: auto;
+    top: max(10px, env(safe-area-inset-top, 0px));
+    width: min(210px, 52vw);
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .corner-meta { display: none; }
+  .corner-keys { display: none; }
+  .corner-shot-row strong { font-size: 12px; }
+  .corner-hud .score-points { font-size: 17px; }
+  .corner-feedback strong { font-size: 13px; }
+  #point-banner {
+    padding: 0 0 5px 7px;
+  }
+  .replay-badge {
+    left: 50%;
+    bottom: max(14px, env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+  }
+  body.is-replay .replay-badge { top: auto; }
+}
+
+
+/* Countdown also lives in the corner cluster */
+#countdown {
+  position: static;
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-items: initial;
+  padding: 0 0 6px 8px;
+  border-left: 2px solid var(--coral);
+  text-align: left;
+  animation: none;
+}
+
+#countdown .countdown-kicker {
+  font-size: 7px;
+  letter-spacing: 0.2em;
+}
+
+#countdown strong {
+  font-size: 20px;
+  line-height: 1;
+}
+
+#countdown .countdown-sub {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  #countdown {
+    padding: 0 0 5px 7px;
+  }
+  #countdown strong {
+    font-size: 17px;
   }
 }

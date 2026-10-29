@@ -136,43 +136,71 @@
 
         <!-- ─────────────────────────── HUD ─────────────────────────── -->
         <div id="hud" class="hud" hidden aria-hidden="true">
-          <div class="hud-top">
-            <div class="player-panel">
-              <span class="player-avatar">JX</span>
-              <span class="player-id"><b>DUKA</b><small><i></i> AUTO-SHOT ONLINE</small></span>
-            </div>
-
-            <div class="scoreboard">
-              <div class="score-team score-mate">
+          <!-- Compact HUD: every readout lives in one cluster, bottom-left.
+               The rest of the screen stays clear for the court. -->
+          <div class="corner-hud" id="corner-hud">
+          <div class="countdown" id="countdown" hidden>
+            <span class="countdown-kicker">NEXT POINT</span>
+            <strong id="countdown-value">READY</strong>
+            <span class="countdown-sub" id="countdown-sub">YOUR SERVE</span>
+          </div>
+          <div id="point-banner" class="point-banner" hidden>
+            <span class="point-kicker" id="point-kicker">POINT</span>
+            <span class="point-main">
+              <strong id="point-title">DUKA</strong>
+              <span class="point-reason" id="point-reason">WINNER</span>
+            </span>
+          </div>
+            <div class="corner-score-row">
+              <span class="score-team score-mate">
                 <span class="serve-pip" id="player-serve" title="Serving"></span>
                 <span class="score-name">DUKA</span>
-                <span class="score-points" id="player-points">0</span>
-              </div>
-              <div class="score-center">
-                <span id="match-label">GAME 1 · FIRST TO 4</span>
-                <strong id="score-meta">READY</strong>
-              </div>
-              <div class="score-team score-rival">
-                <span class="score-points" id="rival-points">0</span>
+                <b class="score-points" id="player-points">0</b>
+              </span>
+              <span class="corner-dash">–</span>
+              <span class="score-team score-rival">
+                <b class="score-points" id="rival-points">0</b>
                 <span class="score-name">LAKI</span>
                 <span class="serve-pip" id="rival-serve" title="Serving"></span>
-              </div>
+              </span>
+              <span class="corner-meta-group">
+                <span class="corner-meta" id="match-label">GAME 1 · FIRST TO 4</span>
+                <span class="corner-state" id="score-meta">READY</span>
+              </span>
+              <span class="match-point-chip" id="match-point-flag" hidden>MATCH POINT</span>
             </div>
 
-            <div class="hud-meta">
-              <div class="meta-chip"><span>RALLY</span><b id="rally-count">0</b></div>
-              <div class="meta-chip"><span>TOP SPEED</span><b><span id="top-speed">0</span><small>KM/H</small></b></div>
-              <button id="sound-btn" class="icon-button" type="button" aria-label="Toggle sound" title="Toggle sound">
-                <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" /></svg>
-                <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="m17 9 5 6M22 9l-5 6" /></svg>
-              </button>
-              <button id="pause-btn" class="icon-button" type="button" aria-label="Pause game" title="Pause">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
-              </button>
+            <div class="corner-shot-row">
+              <span class="shot-auto">AUTO</span>
+              <strong id="auto-shot">TOPSPIN</strong>
+              <span id="auto-hand">FOREHAND</span>
+            </div>
+
+            <div class="corner-stat-row">
+              <span>RALLY <b id="rally-count">0</b></span>
+              <span>TOP <b><span id="top-speed">0</span><small>KM/H</small></b></span>
+            </div>
+
+            <div id="prompt" class="corner-prompt">GET READY</div>
+
+            <div class="corner-feedback" id="hit-feedback">
+              <strong id="hit-rating">PERFECT</strong>
+              <span id="hit-detail">TOPSPIN · 138 KM/H</span>
+            </div>
+
+            <div class="corner-foot">
+              <span class="corner-keys"><kbd>WASD</kbd> MOVE · <kbd>MOUSE</kbd> AIM · <kbd>CLICK</kbd> HIT · <kbd>SHIFT</kbd> SPRINT</span>
+              <span class="corner-icons">
+                <button id="sound-btn" class="icon-button" type="button" aria-label="Toggle sound" title="Toggle sound">
+                  <svg class="icon-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" /></svg>
+                  <svg class="icon-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z" /><path d="m17 9 5 6M22 9l-5 6" /></svg>
+                </button>
+                <button id="pause-btn" class="icon-button" type="button" aria-label="Pause game" title="Pause">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3v14H7zM14 5h3v14h-3z" /></svg>
+                </button>
+              </span>
             </div>
           </div>
-
-          <div class="match-point-flag" id="match-point-flag" hidden>MATCH POINT</div>
 
           <div class="aim-layer" id="aim-layer">
             <div class="reticle" id="reticle">
@@ -186,45 +214,8 @@
               <span class="reticle-corner corner-br"></span>
               <span class="reticle-dot"></span>
             </div>
-            <div class="shot-chip" id="shot-chip">
-              <span class="shot-auto">AUTO SHOT</span>
-              <strong id="auto-shot">TOPSPIN</strong>
-              <span id="auto-hand">FOREHAND</span>
-            </div>
-            <div id="prompt" class="prompt">GET READY</div>
           </div>
 
-          <div class="hit-feedback" id="hit-feedback">
-            <strong id="hit-rating">PERFECT</strong>
-            <span id="hit-detail">TOPSPIN · 138 KM/H</span>
-          </div>
-
-          <div class="hud-bottom">
-            <div class="desktop-controls">
-              <div class="control-row">
-                <span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
-                <span class="control-label">MOVE</span>
-              </div>
-              <div class="control-row">
-                <span class="keys"><kbd>MOUSE</kbd></span>
-                <span class="control-label">AIM</span>
-              </div>
-              <div class="control-row accent-row">
-                <span class="keys"><kbd>CLICK</kbd></span>
-                <span class="control-label">HIT</span>
-              </div>
-              <div class="control-row subtle-row"><span class="control-label">SHIFT SPRINT · RMB FOCUS · ESC PAUSE</span></div>
-            </div>
-
-            <div class="auto-plaque">
-              <span class="plaque-mark">A</span>
-              <span><b>AUTO-SHOT SYSTEM</b><small>Forehand / backhand / slice / volley / smash are chosen for you.</small></span>
-            </div>
-
-            <div class="session-plaque">
-              <span class="mono">COURT 01</span>
-              <span>SUNSET SESSION</span>
-            </div>
           </div>
 
           <div id="touch-ui" class="touch-ui" hidden>
@@ -380,16 +371,6 @@
 
         <!-- ─────────────────────────── BANNERS ─────────────────────────── -->
         <div id="banner-layer" class="banner-layer" aria-live="polite">
-          <div class="point-banner" id="point-banner" hidden>
-            <span id="point-kicker">POINT</span>
-            <strong id="point-title">DUKA</strong>
-            <span id="point-reason">FOREHAND WINNER</span>
-          </div>
-          <div class="countdown" id="countdown" hidden>
-            <span class="countdown-kicker">NEXT POINT</span>
-            <strong id="countdown-value">READY</strong>
-            <span class="countdown-sub" id="countdown-sub">YOUR SERVE</span>
-          </div>
         </div>
 
         <div id="replay-badge" class="replay-badge" hidden>

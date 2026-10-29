@@ -2494,7 +2494,7 @@ class SunsetSlam {
     const hitInfo = this.getHitInfo();
     this.ui.setAim({
       shot: SHOTS[prediction.type]?.label ?? 'TOPSPIN',
-      hand: prediction.type === 'serve' ? 'SERVE' : prediction.hand === 'backhand' ? 'BACKHAND' : 'FOREHAND',
+      hand: prediction.type === 'serve' ? '' : prediction.hand === 'backhand' ? 'BACKHAND' : 'FOREHAND',
       ready: hitInfo.ready,
       danger: false,
       readiness: hitInfo.readiness,
