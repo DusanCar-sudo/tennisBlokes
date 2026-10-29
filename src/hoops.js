@@ -198,9 +198,15 @@ export class Hoops {
   _bindPointer() {
     const c = this.g.canvas;
     this._onDown = (e) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (e.pointerType !== 'mouse' && e.pointerType !== undefined && e.pointerType !== '') return;
       if (!this.g.isActiveMatch() || this.g.paused || this.g.screenshotPaused) return;
       if (this.g.phase !== 'rally') return;
+      if (this.g.mobile) { this.beginCharge(); return; }
+      // Desktop: a click without pointer lock is AIM-ACQUIRE, not a shot.
+      if (!this.g.pointerLocked) {
+        this.g.requestPointerLock();
+        return;
+      }
       this.beginCharge();
     };
     this._onUp = () => {

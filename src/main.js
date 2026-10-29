@@ -844,10 +844,12 @@ class SunsetSlam {
           AIM.minYaw,
           AIM.maxYaw
         );
+        const pitchMax = this.sport === 'basket' ? 0.62 : AIM.maxPitch;
+        const pitchMin = this.sport === 'basket' ? -0.45 : AIM.minPitch;
         this.aimPitch = clamp(
           this.aimPitch - dy * 0.00115,
-          AIM.minPitch,
-          AIM.maxPitch
+          pitchMin,
+          pitchMax
         );
       });
       const endAim = () => {
@@ -958,10 +960,12 @@ class SunsetSlam {
       AIM.minYaw,
       AIM.maxYaw
     );
+    const pitchMax = this.sport === 'basket' ? 0.62 : AIM.maxPitch;
+    const pitchMin = this.sport === 'basket' ? -0.45 : AIM.minPitch;
     this.aimPitch = clamp(
       this.aimPitch - event.movementY * AIM.pitchSensitivity,
-      AIM.minPitch,
-      AIM.maxPitch
+      pitchMin,
+      pitchMax
     );
   }
 
@@ -2062,7 +2066,7 @@ class SunsetSlam {
       if (this.keys.has('arrowup')) this.aimPitch += 0.55 * dt;
       if (this.keys.has('arrowdown')) this.aimPitch -= 0.55 * dt;
       this.aimYaw = clamp(this.aimYaw, AIM.minYaw, AIM.maxYaw);
-      this.aimPitch = clamp(this.aimPitch, AIM.minPitch, AIM.maxPitch);
+      this.aimPitch = clamp(this.aimPitch, AIM.minPitch, pitchMax);
       return;
     }
     if (this.phase === 'intro') {
@@ -2096,7 +2100,10 @@ class SunsetSlam {
     if (this.keys.has('arrowup')) this.aimPitch += 0.55 * dt;
     if (this.keys.has('arrowdown')) this.aimPitch -= 0.55 * dt;
     this.aimYaw = clamp(this.aimYaw, AIM.minYaw, AIM.maxYaw);
-    this.aimPitch = clamp(this.aimPitch, AIM.minPitch, AIM.maxPitch);
+    // Basketball: the rim is 3 m up — the camera must be able to look up.
+    const pitchMax = this.sport === 'basket' ? 0.62 : AIM.maxPitch;
+    const pitchMin = this.sport === 'basket' ? -0.45 : AIM.minPitch;
+    this.aimPitch = clamp(this.aimPitch, pitchMin, pitchMax);
 
     const length = Math.hypot(ix, iz);
     if (length > 1) {
@@ -3213,8 +3220,13 @@ class SunsetSlam {
     } else {
       this.phase = 'intro';
       this.introTimer = 1.25;
-      this.aimYaw = -0.05;
-      this.aimPitch = -0.11;
+      if (this.sport === 'basket') {
+        this.aimYaw = 0;
+        this.aimPitch = 0.3;   // eyes up on the rim
+      } else {
+        this.aimYaw = -0.05;
+        this.aimPitch = -0.11;
+      }
       this.ui.showCountdown({ kicker: 'MATCH START', value: 'READY', sub: 'DUKA SERVES' });
       this.ui.setPrompt('WAITING FOR DUKA');
     }
