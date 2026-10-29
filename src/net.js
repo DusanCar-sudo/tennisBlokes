@@ -78,13 +78,13 @@ export class NetClient {
     };
   }
 
-  host(name) {
+  host(name, sport) {
     this.connect();
     this._pendingHost = name;
     // Send once the socket opens.
     const ws = this.ws;
     const send = () => {
-      if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'host', name }));
+      if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'host', name, sport }));
       else if (ws.readyState === 0) setTimeout(send, 50);
     };
     send();

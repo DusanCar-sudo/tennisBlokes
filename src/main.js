@@ -20,6 +20,7 @@ import {
 } from './utils.js';
 import { SeededRandom } from './rng.js';
 import { buildWorld } from './court.js';
+import { Hoops, HOOPS } from './hoops.js';
 import { TennisCharacter } from './characters.js';
 import { Ball, solveTrajectory } from './ball.js';
 import { Effects } from './effects.js';
@@ -90,6 +91,8 @@ class SunsetSlam {
     this.pointerLockWasActive = false;
     this.hasStarted = false;
     this.mobile = false;
+    this.sport = 'tennis';   // 'tennis' | 'basket' (volleyball later)
+    this.hoops = null;
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     this.keys = new Set();
@@ -379,7 +382,17 @@ class SunsetSlam {
       onPlay: () => {
         this.audio.unlock();
         this.audio.playUi();
-        this.startMatch();
+        this.startMatch(this.sport);
+      },
+      onSport: (sport) => {
+        this.sport = sport;
+        this.audio.playUi();
+        const tagline = document.querySelector('.title-tagline');
+        if (tagline) {
+          tagline.innerHTML = sport === 'basket'
+            ? 'One basket. One rival.<br /><strong>First to 11 wins.</strong>'
+            : 'You move. You aim.<br /><strong>The game picks the shot.</strong>';
+        }
       },
       onHowto: () => {
         this.audio.unlock();
@@ -468,7 +481,7 @@ class SunsetSlam {
       const name = ((url.searchParams.get('name') || nameInput?.value || 'DUKA') + '').trim().toUpperCase() || 'DUKA';
       if (nameInput) nameInput.value = name;
       this.ui.showLobby('host', { name });
-      this.net.host(name);
+      this.net.host(name, this.sport);
     } else {
       const name = ((url.searchParams.get('name') || nameInput?.value || 'LAKI') + '').trim().toUpperCase() || 'LAKI';
       const code = (url.searchParams.get('code') || this.ui.el.codeInput?.value || '').trim().toUpperCase();
@@ -627,6 +640,8 @@ class SunsetSlam {
       }
       case 'start': {
         this.net.opp = msg.opp;
+        if (msg.sport === 'basket' && this.sport !== 'basket') this.sport = 'basket';
+        if (msg.sport === 'tennis' && this.sport === 'basket') this.sport = 'tennis';
         this.notifyMatchReady(msg.opp);
         const role = this.net.role || (this.netMode === 'guest' ? 'guest' : 'host');
         this.ui.showLobbyMatched({
@@ -931,6 +946,11 @@ class SunsetSlam {
   // ───────────────────────── match lifecycle ─────────────────────────
 
   resetToTitle() {
+    if (this.hoops) { this.hoops.dispose(); this.hoops = null; }
+    this.sport = 'tennis';
+    delete this.scoreLabels;
+    delete this.isMatchWon;
+    delete this.wouldWinNextPoint;
     if (this.netMode !== 'ai') {
       this.net.dispose();
       this.netMode = 'ai';
@@ -999,7 +1019,16 @@ class SunsetSlam {
     this.rivalCharacter?.root.position.set(0, 0, 0);
   }
 
-  startMatch() {
+  startMatch(sport = this.sport) {
+    this.sport = sport;
+    if (sport === 'basket') {
+      this.startBasketMatch();
+      return;
+    }
+    if (this.hoops) { this.hoops.dispose(); this.hoops = null; }
+    delete this.scoreLabels;
+    delete this.isMatchWon;
+    delete this.wouldWinNextPoint;
     this.audio.unlock();
     this.audio.setMood('match');
     this.ui.showGame();
@@ -1082,6 +1111,42 @@ class SunsetSlam {
         .add(new THREE.Vector3(0, 1.16, 0));
     }
     return new THREE.Vector3(this.rival.pos.x + 0.22, 1.16, this.rival.pos.z + 0.24);
+  }
+
+  startBasketMatch() {
+    this.audio.unlock();
+    this.audio.setMood('match');
+    this.ui.showGame();
+    this.ui.hideResults();
+    this.ui.hideHowTo();
+    this.ui.clearConfetti();
+    this.ui.hideBanners();
+    this.ui.showHud(true);
+    this.ui.setPaused(false);
+    this.paused = false;
+    this.screenshotPaused = false;
+    this.hasStarted = true;
+    this.matchWinner = null;
+    this.matchPoint = false;
+    this.resultsShown = false;
+    this.endTimer = 0;
+    this.score.player = 0;
+    this.score.rival = 0;
+    this.totalPoints = 0;
+    this.rally = 0;
+    this.longestRally = 0;
+    // Basketball scoring overrides (instance-level, removed on tennis start).
+    this.scoreLabels = () => ({
+      player: String(this.score.player),
+      rival: String(this.score.rival),
+      meta: `RACE TO ${HOOPS.target}`,
+    });
+    this.isMatchWon = () => this.hoops?.matchWon() ?? false;
+    this.wouldWinNextPoint = () => this.hoops?.wouldWinNext() ?? false;
+    if (this.hoops) this.hoops.dispose();
+    this.hoops = new Hoops(this);
+    this.hoops.begin();
+    this.ui.showCountdown({ kicker: 'BASKETBALL 1V1', value: 'CHECK', sub: 'FIRST TO 11' });
   }
 
   beginServe(server) {
@@ -1285,6 +1350,15 @@ class SunsetSlam {
 
   attemptHit(source = 'mouse') {
     if (!this.isActiveMatch() || this.paused || this.screenshotPaused) return;
+    if (this.sport === 'basket' && this.hoops) {
+      if (this.netMode === 'guest') {
+        this.guestInput.hitSeq += 1;
+        this.net.sendInput({ h: this.guestInput.hitSeq });
+        return;
+      }
+      this.hoops.onAction(source);
+      return;
+    }
     if (this.netMode === 'guest') {
       // Host is authoritative. Buffer early clicks locally (LAN latency makes
       // "click at the bounce" even earlier on the far screen) and release the
@@ -2288,6 +2362,23 @@ class SunsetSlam {
   }
 
   updatePoint(dt) {
+    if (this.sport === 'basket' && this.hoops) {
+      if (this.replay) {
+        this.updateReplay(dt);
+        return true;
+      }
+      this.pointTimer -= dt;
+      this.hoops.pointBallFall(dt);
+      this.updateCharacters(dt, 0, 0);
+      if (this.pointTimer <= 0) {
+        if (this.matchWinner) {
+          this.finishMatch(this.matchWinner);
+        } else {
+          this.hoops.afterPoint();
+        }
+      }
+      return false;
+    }
     if (this.replay) {
       this.updateReplay(dt);
       return true;
@@ -2326,14 +2417,17 @@ class SunsetSlam {
     if (!this.resultsShown && this.endTimer <= 0) {
       this.resultsShown = true;
       const win = this.matchWinner === 'player';
+      const basket = this.sport === 'basket';
       this.ui.showHud(false);
       if (this.netMode === 'host') {
         this.pushNetEvent({
           ev: 'results',
           win,
-          line: win
-            ? 'You held center court. The sunset belongs to Laki… for Duka.'
-            : 'Laki takes the tiebreak. Replay the rally, not the scoreboard.',
+          line: basket
+            ? (win ? 'Buckets all day. The rim never stood a chance.' : 'Laki owned the paint tonight. Run it back.')
+            : win
+              ? 'You held center court. The sunset belongs to Laki… for Duka.'
+              : 'Laki takes the tiebreak. Replay the rally, not the scoreboard.',
           score: `${this.score.player} — ${this.score.rival}`,
           points: this.stats.pointsWon,
           topSpeed: formatSpeed(this.stats.topSpeed),
@@ -2344,9 +2438,11 @@ class SunsetSlam {
       }
       this.ui.showResults({
         win,
-        line: win
-          ? 'You held center court. The sunset belongs to Jax.'
-          : 'Riko takes the tiebreak. Replay the rally, not the scoreboard.',
+        line: basket
+          ? (win ? 'Buckets all day. The rim never stood a chance.' : 'Laki owned the paint tonight. Run it back.')
+          : win
+            ? 'You held center court. The sunset belongs to Duka.'
+            : 'Laki closes it out. Shake it off — next run is yours.',
         score: `${this.score.player} — ${this.score.rival}`,
         points: this.stats.pointsWon,
         topSpeed: formatSpeed(this.stats.topSpeed),
@@ -2803,6 +2899,15 @@ class SunsetSlam {
   guestUpdate(dt, realDt) {
     const snap = this.snapshot;
     if (!snap) return;
+    if (this.sport === 'basket' && this.hoops) {
+      this.hoops.guestUpdate(dt, realDt);
+      this.inputTimer = (this.inputTimer || 0) + dt;
+      if (this.inputTimer >= 0.033) {
+        this.inputTimer = 0;
+        this.sendGuestInput();
+      }
+      return;
+    }
 
     // Snapshot world coords → arena-local (180° rotation): negate x/z.
     const authoritative = new THREE.Vector3(-snap.r.x, 0, -snap.r.z);
@@ -3019,6 +3124,16 @@ class SunsetSlam {
       role === 'host' ? 'You are DUKA, serving first. Laki plays the far side.' : 'You are LAKI. DUKA serves first — take the far side.',
       5000
     );
+    if (this.sport === 'basket') {
+      // Both roles: basketball replaces the tennis serve flow entirely.
+      this.startBasketMatch();
+      this.ui.showToast(
+        role === 'host' ? `VS ${this.net.opp || 'LAKI'} · BASKETBALL` : `VS ${this.net.opp || 'DUKA'} · BASKETBALL`,
+        'First to 11 — one basket, win by 2.',
+        5000
+      );
+      return;
+    }
     if (role === 'host') {
       this.placeForServe('player');
       this.phase = 'intro';
@@ -3040,6 +3155,10 @@ class SunsetSlam {
   update(dt, realDt) {
     if (this.netMode === 'guest' && this.phase !== 'title' && this.phase !== 'howto') {
       this.guestUpdate(dt, realDt);
+      return;
+    }
+    if (this.sport === 'basket' && this.hoops) {
+      this.hoops.update(dt, realDt);
       return;
     }
     if (this.phase === 'title') {
@@ -3407,7 +3526,7 @@ class SunsetSlam {
         win,
         line: win
           ? 'You held center court. The sunset belongs to Jax.'
-          : 'Riko takes the tiebreak. Replay the rally, not the scoreboard.',
+          : 'Laki closes it out. Shake it off — next run is yours.',
         score: `${this.score.player} — ${this.score.rival}`,
         points: this.stats.pointsWon,
         topSpeed: formatSpeed(this.stats.topSpeed),

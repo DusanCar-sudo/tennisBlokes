@@ -3281,3 +3281,34 @@ body.is-replay .hud-bottom { opacity: 1; }
     transform-origin: top left;
   }
 }
+
+
+/* Sport selector pills on the title */
+.sport-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sport-pill {
+  padding: 8px 18px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.sport-pill.is-active {
+  color: #08131d;
+  background: var(--sun);
+  border-color: var(--sun);
+}
+
+.sport-pill.is-coming {
+  opacity: 0.4;
+  cursor: default;
+}

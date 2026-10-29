@@ -403,3 +403,49 @@ host receives chime + `LAKI joined your match` system notification + toast,
 both enter the match (`intro`) and titles reset. Regular two-browser PvP
 regression still passes with zero errors. Waiting clock ticks (00:01 → 00:04
 → 00:06 in a live probe).
+
+
+## Update 10 — BASKETBALL 1v1 (same engine, second sport)
+
+Requested: keep the same environment, switch the sport to basketball — 1v1 on
+one basket, vs CPU or multiplayer, with volleyball planned next.
+
+Architecture: the game is now a small sports hub. A sport picker on the title
+screen (TENNIS · BASKETBALL · VOLLEYBALL-soon) sets `game.sport`; basketball
+lives in `src/hoops.js` (court builder + engine) and dispatches from the same
+Game loop, reusing the stadium, athletes, over-the-shoulder camera, corner
+HUD, click-buffering input style, slow-motion replay, audio, lobby, match
+codes, notifications and the LAN/internet transport. The tennis flow is
+untouched (verified end-to-end after the surgery: serve → rally → point,
+tennis court restored, zero errors).
+
+Basketball specifics:
+
+- Half-court with wooden floor, painted key, true three-point arc, hoop with
+  backboard, rim (torus), net, pole; tennis court/net hidden while playing.
+- Ball: orange, own integrator (4× substepped gravity), sphere-vs-torus rim
+  collision with proper 3D contact normals, backboard plane, floor bounces.
+- Shots: hold-to-charge with a sweet spot; auto type by distance (DUNK < 2.1 m
+  powers through the rim, LAYUP < 4.4, JUMPER inside the arc, THREE beyond);
+  2s/3s; quality from charge accuracy minus defender contest; 14 s shot
+  clock; live rebounds; steal pokes; dead-ball watchdog hands stranded balls
+  to the nearest athlete.
+- CPU Laki: guards the line between handler and hoop, contests, steals, and
+  on offense drives to spots and shoots with openness-based quality.
+- Multiplayer: the sport travels with the room (server relays it in the
+  handshake); the guest's game switches automatically. Guest movement
+  prediction + host-authoritative shots reuse the tennis transport.
+
+Verified:
+
+- shot matrix (`scripts/hoops-shots.mjs`): dunk 1.4 m → +2, layup 2.8 m → +2,
+  free-throw 5.8 m → +2, three 7.2 m → +3, 19 m heave → miss, weak charge →
+  miss/rebound
+- live bot match: pointer charge-and-release scores, possession alternates,
+  CPU offense/defense runs, shot clock counts, zero errors
+- two-browser PvP: host picks basketball, guest auto-switches (court built on
+  both), guest movement streams (Δz on host), host shot renders as flight on
+  guest, zero errors
+- mobile (Pixel 7, real touch): joystick runs the athlete, HIT button shoots
+  (THREE attempted from deep), zero errors
+- tennis regression: full point flow intact, basketball court fully removed

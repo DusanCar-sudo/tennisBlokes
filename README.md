@@ -1,5 +1,9 @@
 # SUNSET SLAM
 
+> **Two sports, one stadium.** TENNIS (first to 4) and BASKETBALL 1v1 (first
+> to 11) share the same sunset court, camera, controls and multiplayer —
+> pick a sport on the title screen. Volleyball is planned next.
+
 Third-person arcade tennis for the browser, in the spirit of a Fortnite
 over-the-shoulder camera: you move and aim, and an **auto-shot system** picks
 the stroke — topspin, drive, slice, volley, smash, lob or drop — from the
@@ -195,3 +199,25 @@ src/textures.js       Canvas texture factory (court, ball, net, jersey, screens)
 scripts/              Capture, bot-playtest and inspector drivers
 artifacts/            Evidence passes (screenshots, reports, motion video)
 ```
+
+
+## BASKETBALL 1v1
+
+Pick **BASKETBALL** on the title screen. Half-court, one basket, DUKA vs
+LAKI (CPU or another player over the network): first to 11, win by 2.
+
+- **Move** WASD / joystick · **Aim** mouse / right-side drag
+- **Shoot**: hold CLICK (or HIT on mobile) to charge, release in the sweet
+  spot (~70%). The auto-shot system picks DUNK / LAYUP / JUMPER / THREE from
+  your distance — the HUD chip shows the shot and point value before you
+  release, and the reticle ring fills as your charge meter.
+- **2s inside the arc, 3s beyond it.** Defenders contest: shooting over Laki
+  hurts your accuracy, and he pokes the ball loose if you hold it too close.
+- **Rebounds are live**: missed shots bounce off a physically simulated rim
+  (true torus collision) and backboard — chase the ball to keep possession.
+- 14-second shot clock; make it and the other side takes the ball.
+- Slow-motion replay of every bucket; same lobby, match codes, notifications
+  and LAN/internet play as tennis — the host picks the sport, the guest's
+  game switches automatically.
+
+![Basketball court](artifacts/hoops/basket-court.png)

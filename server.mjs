@@ -285,6 +285,7 @@ function handleConnection(ws) {
             guestName: null,
           };
           isHost = true;
+          room.sport = msg.sport === 'basket' ? 'basket' : 'tennis';
           rooms.set(code, room);
           ws.send({ t: 'hosted', code, name: room.hostName });
           break;
@@ -305,9 +306,9 @@ function handleConnection(ws) {
           room.guestWs = ws;
           room.guestName = sanitizeName(msg.name, 'LAKI');
           isHost = false;
-          ws.send({ t: 'joined', code: room.code, opp: room.hostName, name: room.guestName });
-          room.hostWs.send({ t: 'start', opp: room.guestName });
-          room.guestWs.send({ t: 'start', opp: room.hostName });
+          ws.send({ t: 'joined', code: room.code, opp: room.hostName, name: room.guestName, sport: room.sport });
+          room.hostWs.send({ t: 'start', opp: room.guestName, sport: room.sport });
+          room.guestWs.send({ t: 'start', opp: room.hostName, sport: room.sport });
           break;
         }
         case 'snap': {

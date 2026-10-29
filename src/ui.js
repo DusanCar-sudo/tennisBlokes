@@ -18,6 +18,8 @@ export class UI {
       title: $('title-screen'),
       hud: $('hud'),
       playBtn: $('play-btn'),
+      sportTennis: $('sport-tennis'),
+      sportBasket: $('sport-basket'),
       howtoBtn: $('howto-btn'),
       howtoScreen: $('howto-screen'),
       howtoClose: $('howto-close'),
@@ -120,6 +122,18 @@ export class UI {
       if (typeof handler === 'function') handler(...args);
     };
 
+    const sportBtns = [
+      [this.el.sportTennis, 'tennis'],
+      [this.el.sportBasket, 'basket'],
+    ];
+    for (const [btn, sport] of sportBtns) {
+      btn?.addEventListener('click', () => {
+        if (btn.classList.contains('is-active')) return;
+        for (const [other] of sportBtns) other?.classList.remove('is-active');
+        btn.classList.add('is-active');
+        fire('onSport', sport);
+      });
+    }
     this.el.playBtn?.addEventListener('click', (event) => {
       event.preventDefault();
       fire('onPlay');
