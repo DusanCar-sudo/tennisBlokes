@@ -10,7 +10,7 @@ import { makeBasketballTexture } from './textures.js';
 export const HOOPS = {
   rimCenter: new THREE.Vector3(0, 3.05, -12.16),
   rimR: 0.23,
-  ballR: 0.128,
+  ballR: 0.1194,  // official size 7: 75cm circumference
   boardZ: -12.44,           // backboard plane (front face)
   boardW: 1.83,
   boardH: 1.07,
@@ -159,7 +159,7 @@ export class Hoops {
     mesh.material.map = this._basketTex;
     mesh.material.color.set(0xffffff);
     mesh.material.needsUpdate = true;
-    mesh.scale.setScalar(3.6);
+    mesh.scale.setScalar(3.62);
 
     this.possession = 'player';
     game.hoopsRim = HOOPS.rimCenter.clone();     // 'player' | 'rival' | null (loose ball)
@@ -687,9 +687,10 @@ export class Hoops {
     if (b.pos.y < HOOPS.ballR) {
       b.pos.y = HOOPS.ballR;
       if (b.vel.y < -0.4) {
-        b.vel.y = -b.vel.y * 0.6;
-        b.vel.x *= 0.82;
-        b.vel.z *= 0.82;
+        // Size-7 ball at 8 psi: drops from 1.83 m rebound ~1.3 m (e ≈ 0.84)
+        b.vel.y = -b.vel.y * (Math.abs(b.vel.y) > 3 ? 0.84 : 0.7);
+        b.vel.x *= 0.88;
+        b.vel.z *= 0.88;
         b.bounces += 1;
         g.audio.playUi();
       } else {
