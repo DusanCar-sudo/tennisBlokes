@@ -52,6 +52,20 @@ Wi-Fi). If a device can't connect, check the host firewall allows TCP 4173.
 The host's browser runs the authoritative match simulation; the guest streams
 inputs (~30 Hz) and receives state snapshots (~20 Hz), so a dropped connection
 simply ends the match gracefully back at the menu.
+
+### Knowing when the other player shows up
+
+- **Waiting screen with a live clock:** hosting shows
+  `WAITING FOR LAKI · CODE XXXX · 00:42` and keeps counting. The browser tab
+  reads `⏳ WAITING FOR LAKI`.
+- **Notifications on arrival:** when the other player joins you get a chime, a
+  vibration (phone), a toast, the tab flips to `🎾 LAKI JOINED`, and — if you
+  granted notification permission once (asked when you press HOST / JOIN) — a
+  system notification, so you notice even in another tab.
+- **Auto-join while waiting:** if you press **JOIN LAKI** before he hosts, the
+  game keeps retrying every 2.5 s. The moment he opens his match you are joined
+  automatically and both sides get the notification — no need to press again.
+- Opponent leaving mid-match also raises an alert.
 ### Playing across the world (Vietnam ↔ Serbia)
 
 The match server runs on Duka's PC in Vietnam; Laki connects from Serbia over
