@@ -187,7 +187,8 @@ class SunsetSlam {
   async init() {
     // ?sport=basket preselects basketball on the title screen.
     const urlSport = new URLSearchParams(window.location.search).get('sport');
-    if (urlSport === 'basket' || urlSport === 'basketball') {
+    this.urlSport = urlSport === 'basket' || urlSport === 'basketball' ? 'basket' : null;
+    if (this.urlSport) {
       this.sport = 'basket';
       window.setTimeout(() => {
         document.getElementById('sport-basket')?.classList.add('is-active');
@@ -958,7 +959,7 @@ class SunsetSlam {
 
   resetToTitle() {
     if (this.hoops) { this.hoops.dispose(); this.hoops = null; }
-    this.sport = 'tennis';
+    this.sport = this.urlSport || 'tennis';
     delete this.scoreLabels;
     delete this.isMatchWon;
     delete this.wouldWinNextPoint;
