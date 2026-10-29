@@ -272,6 +272,17 @@ export class AudioEngine {
     this._tone(1180, 0.05, 0.024, 'sine', 0.035);
   }
 
+  // Distinct "someone arrived" chime — plays even when the tab is hidden
+  // (handled by the caller) so a waiting host notices a friend joining.
+  playAlert() {
+    if (!this.ctx || !this.soundEnabled) return;
+    const notes = [659.25, 880.0, 1174.66];
+    notes.forEach((note, i) => {
+      this._tone(note, 0.42, 0.05, 'triangle', i * 0.12);
+      this._tone(note * 2, 0.2, 0.016, 'sine', i * 0.12 + 0.01);
+    });
+  }
+
   playCountdown(final = false) {
     if (!this.ctx || !this.soundEnabled) return;
     this._tone(final ? 880 : 560, final ? 0.3 : 0.12, 0.07, 'triangle');

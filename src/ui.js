@@ -274,7 +274,7 @@ export class UI {
       el.lobbyCode.textContent = code || '····';
       el.codeField?.setAttribute('hidden', '');
       el.lobbyStatusText.textContent = status || 'WAITING FOR LAKI TO JOIN…';
-      el.lobbyFoot.textContent = 'BOTH PLAYERS MUST BE ON THE SAME HOME NETWORK';
+      el.lobbyFoot.textContent = 'LINK WORKS ON ANY NETWORK — SEND IT TO LAKI';
     } else if (mode === 'join') {
       el.lobbyKicker.textContent = 'JOIN LAN MATCH';
       el.lobbyTitle.textContent = 'JOINING…';
@@ -282,7 +282,7 @@ export class UI {
       el.lobbyCodeRow?.setAttribute('hidden', '');
       el.codeField?.removeAttribute('hidden');
       el.lobbyStatusText.textContent = status || 'SEARCHING FOR HOST…';
-      el.lobbyFoot.textContent = 'ASK DUKA FOR HIS MATCH CODE IF SEARCH FAILS';
+      el.lobbyFoot.textContent = 'AUTO-JOIN IS ON — THIS PAGE WILL CONNECT WHEN DUKA HOSTS';
     } else {
       el.lobbyKicker.textContent = 'LAN MATCH';
       el.lobbyStatusText.textContent = status || 'CONNECTING…';

@@ -374,3 +374,32 @@ iPhone SE, iPhone 14 Pro Max, Pixel 7 landscape: controls fully inside the
 viewport, canvas matches the visible height, no page scroll, joystick drag
 moves the athlete 1.8–3.0 m with **zero camera yaw change**, right-side drag
 rotates the camera, zero console errors.
+
+
+## Update 9 — match waiting + arrival notifications
+
+Question: how do you get told that you're waiting on a match, or that the
+other player has arrived?
+
+Added:
+
+- **Waiting state with elapsed clock** in the lobby: host sees
+  `WAITING FOR LAKI · CODE XXXX · mm:ss`; guest sees
+  `WAITING FOR DUKA TO HOST · AUTO-JOIN ON · mm:ss`.
+- **Tab-title alert** while waiting (`⏳ WAITING FOR LAKI`) and on arrival
+  (`🎾 LAKI JOINED`), restored automatically when the match starts.
+- **Arrival notifications**: three-note chime (`audio.playAlert`), device
+  vibration when supported, toast, and a real system `Notification` (icon,
+  tag) when the page is hidden — permission requested on the HOST/JOIN clicks.
+  Opponent-leaving raises the same alert style.
+- **Guest auto-join retry**: pressing JOIN with no hosted match keeps
+  retrying every 2.5 s; when the host opens the lobby the guest connects
+  automatically and both sides are notified.
+- Lobby foot copy corrected (no longer "same home network").
+
+Verified with a two-page flow test: guest waits (`retrying: true`, tab title
+`⏳ WAITING FOR DUKA`), host opens lobby, guest auto-joins within one retry,
+host receives chime + `LAKI joined your match` system notification + toast,
+both enter the match (`intro`) and titles reset. Regular two-browser PvP
+regression still passes with zero errors. Waiting clock ticks (00:01 → 00:04
+→ 00:06 in a live probe).

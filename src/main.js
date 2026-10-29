@@ -161,6 +161,15 @@ class SunsetSlam {
     this.snapHistory = [];          // recent ball states, keyed by snapshot seq
     this.guestSnapSq = 0;           // newest snapshot seq Laki has seen
 
+    // Lobby waiting / notifications
+    this.baseTitle = document.title;
+    this.lobbyMode = null;
+    this.lobbyStartedAt = 0;
+    this.lobbyTimer = null;
+    this.joinRetry = null;
+    this.joinRetryTimer = null;
+    this.tabAlert = false;
+
     // Point replay / slow motion.
     this.recordBuffer = [];         // rolling rally recording
     this.replay = null;             // active replay state
@@ -412,15 +421,18 @@ class SunsetSlam {
       onHost: () => {
         this.audio.unlock();
         this.audio.playUi();
+        this.requestNotifyPermission();
         this.openLobby('host');
       },
       onJoin: () => {
         this.audio.unlock();
         this.audio.playUi();
+        this.requestNotifyPermission();
         this.openLobby('join');
       },
       onLobbyCancel: () => {
         this.audio.playUi();
+        this.stopLobbyWait();
         this.net.dispose();
         this.ui.hideLobby();
         this.ui.showTitle();
@@ -447,6 +459,9 @@ class SunsetSlam {
   openLobby(mode) {
     this.net.dispose();
     this.setupNetHandlers();
+    this.lobbyMode = mode;
+    this.lobbyStartedAt = performance.now();
+    this.startLobbyWait();
     const url = new URL(window.location.href);
     const nameInput = this.ui.el.nameInput;
     if (mode === 'host') {
@@ -464,6 +479,119 @@ class SunsetSlam {
     }
   }
 
+  // ── match notifications ──────────────────────────────────────────
+  requestNotifyPermission() {
+    try {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'default') {
+        Notification.requestPermission?.()?.catch?.(() => {});
+      }
+    } catch { /* notifications are a bonus, never fatal */ }
+  }
+
+  showSystemNotification(title, body) {
+    try {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const n = new Notification(title, {
+        body,
+        icon: 'assets/icon.png',
+        tag: 'sunset-slam-match',
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch { /* ignore */ }
+  }
+
+  setTabAlert(text) {
+    this.tabAlert = true;
+    document.title = text;
+  }
+
+  clearTabAlert() {
+    if (!this.tabAlert) return;
+    this.tabAlert = false;
+    document.title = this.baseTitle;
+  }
+
+  startLobbyWait() {
+    this.stopLobbyWait();
+    this.updateWaitingStatus();
+    this.lobbyTimer = window.setInterval(() => this.updateWaitingStatus(), 1000);
+  }
+
+  stopLobbyWait() {
+    if (this.lobbyTimer) window.clearInterval(this.lobbyTimer);
+    this.lobbyTimer = null;
+    this.stopJoinRetry();
+  }
+
+  updateWaitingStatus() {
+    if (!this.lobbyMode || !this.ui.el.lobbyScreen || this.ui.el.lobbyScreen.hidden) return;
+    const elapsedS = Math.max(0, Math.floor((performance.now() - this.lobbyStartedAt) / 1000));
+    const mm = String(Math.floor(elapsedS / 60)).padStart(2, '0');
+    const ss = String(elapsedS % 60).padStart(2, '0');
+    const clock = `${mm}:${ss}`;
+    const code = this.net.code || this.joinRetry?.code || '';
+    if (this.lobbyMode === 'host') {
+      this.setTabAlert(`⏳ WAITING FOR LAKI · SUNSET SLAM`);
+      this.ui.updateLobbyStatus(
+        code
+          ? `WAITING FOR LAKI · CODE ${code} · ${clock}`
+          : `CONNECTING TO THE MATCH SERVER… · ${clock}`
+      );
+    } else {
+      this.setTabAlert(`⏳ WAITING FOR DUKA · SUNSET SLAM`);
+      this.ui.updateLobbyStatus(
+        `WAITING FOR DUKA TO HOST · AUTO-JOIN ON · ${clock}`
+      );
+    }
+  }
+
+  startJoinRetry() {
+    if (this.joinRetryTimer) return;
+    this.joinRetry = {
+      name: this.net.name || 'LAKI',
+      code: this.net.code || (this.ui.el.codeInput?.value || '').trim().toUpperCase() || null,
+      attempts: 0,
+    };
+    this.joinRetryTimer = window.setInterval(() => this.attemptJoinRetry(), 2500);
+  }
+
+  attemptJoinRetry() {
+    const jr = this.joinRetry;
+    if (!jr) return;
+    if (!this.ui.el.lobbyScreen || this.ui.el.lobbyScreen.hidden) {
+      this.stopJoinRetry();
+      return;
+    }
+    jr.attempts += 1;
+    this.net.dispose();
+    this.setupNetHandlers();
+    this.net.join(jr.name, jr.code || undefined);
+    this.updateWaitingStatus();
+  }
+
+  stopJoinRetry() {
+    if (this.joinRetryTimer) window.clearInterval(this.joinRetryTimer);
+    this.joinRetryTimer = null;
+    this.joinRetry = null;
+  }
+
+  notifyMatchReady(opp) {
+    this.stopLobbyWait();
+    this.audio.unlock?.();
+    this.audio.playAlert();
+    navigator.vibrate?.([120, 70, 120]);
+    this.setTabAlert(`🎾 ${opp} JOINED — SUNSET SLAM`);
+    if (document.hidden) {
+      this.showSystemNotification(`${opp} joined your match`, 'Match is starting — come back to play.');
+    }
+    this.ui.showToast(`${opp} JOINED`, 'MATCH IS STARTING…', 3200);
+    window.setTimeout(() => this.clearTabAlert(), 15000);
+  }
+
   setupNetHandlers() {
     this.net.onMessage = (msg) => this.handleNetMessage(msg);
     this.net.onState = (status) => {
@@ -471,7 +599,14 @@ class SunsetSlam {
         this.ui.showToast('CONNECTION LOST', 'The LAN match ended. Back to the menu.', 4000);
         this.returnToTitle();
       } else if (status === 'closed' && !this.ui.el.lobbyScreen?.hidden) {
-        this.ui.updateLobbyStatus('SERVER UNREACHABLE — IS THE GAME RUNNING ON THE HOST PC?', { error: true });
+        if (this.joinRetry) {
+          this.updateWaitingStatus();
+        } else if (this.lobbyMode === 'join') {
+          this.startJoinRetry();
+          this.updateWaitingStatus();
+        } else {
+          this.ui.updateLobbyStatus('SERVER UNREACHABLE — IS THE GAME RUNNING ON THE HOST PC?', { error: true });
+        }
       }
     };
   }
@@ -481,15 +616,18 @@ class SunsetSlam {
       case 'hosted': {
         this.net.code = msg.code;
         this.ui.showLobby('host', { code: msg.code, name: msg.name });
+        this.updateWaitingStatus();
         break;
       }
       case 'joined': {
         this.net.opp = msg.opp;
+        this.stopJoinRetry();
         this.ui.updateLobbyStatus('CONNECTED TO ' + msg.opp + ' — STARTING…', { hideSpinner: true });
         break;
       }
       case 'start': {
         this.net.opp = msg.opp;
+        this.notifyMatchReady(msg.opp);
         const role = this.net.role || (this.netMode === 'guest' ? 'guest' : 'host');
         this.ui.showLobbyMatched({
           me: role === 'guest' ? (this.net.name || 'LAKI') : 'DUKA',
@@ -518,13 +656,23 @@ class SunsetSlam {
       }
       case 'left': {
         if (this.netMode === 'host' || this.netMode === 'guest') {
+          this.audio.playAlert();
+          navigator.vibrate?.([90, 60, 90]);
+          this.setTabAlert('⚠ OPPONENT LEFT — SUNSET SLAM');
+          if (document.hidden) this.showSystemNotification('Opponent left', 'The match ended. Back to the menu.');
           this.ui.showToast('OPPONENT LEFT', 'The LAN match ended. Back to the menu.', 4000);
           this.returnToTitle();
         }
         break;
       }
       case 'err': {
-        this.ui.updateLobbyStatus(msg.msg || 'MATCHMAKING ERROR', { error: true });
+        if (this.lobbyMode === 'join' && /open match|not found|no match/i.test(msg.msg || '')) {
+          // Nobody has hosted yet — keep waiting and auto-join when they do.
+          this.startJoinRetry();
+          this.updateWaitingStatus();
+        } else {
+          this.ui.updateLobbyStatus(msg.msg || 'MATCHMAKING ERROR', { error: true });
+        }
         break;
       }
       default:
@@ -2828,6 +2976,8 @@ class SunsetSlam {
 
   // ── Host/guest session lifecycle ──
   beginNetSession(role) {
+    this.stopLobbyWait();
+    this.clearTabAlert();
     this.netMode = role;
     this.myRole = role === 'host' ? 'player' : 'rival';
     this.remoteEvents.length = 0;
@@ -3091,6 +3241,8 @@ class SunsetSlam {
   }
 
   returnToTitle() {
+    this.stopLobbyWait();
+    this.clearTabAlert();
     this.paused = false;
     this.ui.hideResults();
     this.ui.hideHowTo();
