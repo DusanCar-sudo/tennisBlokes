@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { clamp, damp, lerp, smoothstep } from './utils.js';
-import { makeJerseyBackTexture } from './textures.js';
+import { makeJerseyBackTexture, makeNumberTexture } from './textures.js';
 
 const shadowTexture = (() => {
   let tex;
@@ -402,12 +402,19 @@ export function createCharacter(config) {
   shirtMesh.receiveShadow = true;
 
   const chestBand = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.238, 0.235, 0.035, 14, 1, true),
+    new THREE.CylinderGeometry(0.24, 0.236, 0.055, 14, 1, true),
     materials.accent
   );
   chestBand.scale.set(1, 1, 0.77);
-  chestBand.position.y = 0.34;
+  chestBand.position.y = 0.37;
   torso.add(chestBand);
+  // side stripes down the torso (jersey piping)
+  for (const side of [-1, 1]) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.62, 0.012), materials.accent);
+    stripe.position.set(side * 0.232, 0.2, 0);
+    stripe.rotation.z = side * 0.02;
+    torso.add(stripe);
+  }
 
   const collar = new THREE.Mesh(
     new THREE.TorusGeometry(0.105, 0.017, 6, 16),
@@ -427,11 +434,26 @@ export function createCharacter(config) {
     side: THREE.DoubleSide,
     toneMapped: true,
   });
-  const numberPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.32), numberMaterial);
-  numberPlane.position.set(0, 0.31, 0.166);
+  const numberPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.46), numberMaterial);
+  numberPlane.position.set(0, 0.3, 0.171);
   numberPlane.rotation.y = 0;
   numberPlane.renderOrder = 1;
   torso.add(numberPlane);
+
+  // Chest number (front) — visible from the over-the-shoulder camera.
+  const chestTex = makeNumberTexture(number, accentColor);
+  const chestMaterial = new THREE.MeshBasicMaterial({
+    map: chestTex,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: true,
+  });
+  const chestPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), chestMaterial);
+  chestPlane.position.set(0, 0.3, -0.168);
+  chestPlane.rotation.y = Math.PI;
+  chestPlane.renderOrder = 1;
+  torso.add(chestPlane);
 
   // Neck and head.
   const neck = addMesh(
@@ -735,6 +757,7 @@ export function createCharacter(config) {
     blob,
     jerseyTexture,
     numberPlane,
+    chestPlane,
   };
 }
 
@@ -790,6 +813,9 @@ export class TennisCharacter {
       this.rig.numberPlane.material.map = tex;
       this.rig.jerseyTexture = tex;
       this.rig.numberPlane.material.needsUpdate = true;
+      const chest = makeNumberTexture(kit.number, kit.accentColor || '#f8f1de');
+      this.rig.chestPlane.material.map = chest;
+      this.rig.chestPlane.material.needsUpdate = true;
     }
     if (kit.headwear === false) this.rig.headwear.visible = false;
     else if (kit.headwear === true) this.rig.headwear.visible = true;

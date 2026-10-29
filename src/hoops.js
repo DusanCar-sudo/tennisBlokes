@@ -159,9 +159,10 @@ export class Hoops {
     mesh.material.map = this._basketTex;
     mesh.material.color.set(0xffffff);
     mesh.material.needsUpdate = true;
-    mesh.scale.setScalar(1.18);
+    mesh.scale.setScalar(3.6);
 
-    this.possession = 'player';     // 'player' | 'rival' | null (loose ball)
+    this.possession = 'player';
+    game.hoopsRim = HOOPS.rimCenter.clone();     // 'player' | 'rival' | null (loose ball)
     this.shotClock = HOOPS.shotClock;
     this.charge = 0;
     this.charging = false;
@@ -253,6 +254,19 @@ export class Hoops {
     b.pos.copy(this.holdPos(offense));
   }
 
+  carrierPos() {
+    return this.possession === 'rival' ? this.g.rival.pos : this.g.player.pos;
+  }
+
+  // The power window that lands the ball on the rim from the carrier's
+  // current distance. Farther = green zone further up the gauge.
+  greenZone() {
+    const a = this.carrierPos();
+    const dist = Math.hypot(a.x - HOOPS.rimCenter.x, a.z - HOOPS.rimCenter.z);
+    const center = clamp(dist / 13.5, 0.3, 0.92);
+    return { center, width: 0.13 };
+  }
+
   holdPos(who) {
     const a = who === 'player' ? this.g.player.pos : this.g.rival.pos;
     return new THREE.Vector3(a.x + 0.34, 1.02, a.z + 0.1);
@@ -280,15 +294,7 @@ export class Hoops {
   }
 
   beginCharge() {
-    if (this.g.netMode === 'guest') {
-      // Guests fire a quick shot request on release (host validates).
-      if (!this.iHaveBall() || this.shot) return;
-      this.charging = true;
-      this.charge = 0;
-      return;
-    }
-    if (this.possession !== 'player') return;
-    if (this.g.ball.mode !== 'held' || this.shot) return;
+    if (!this.iHaveBall() || this.shot || this.charging) return;
     this.charging = true;
     this.charge = 0;
   }
@@ -297,13 +303,13 @@ export class Hoops {
     if (!this.charging) return;
     this.charging = false;
     const g = this.g;
+    const power = this.charge;
     if (g.netMode === 'guest') {
-      // Only send if the charge landed in a sane window; host treats any
-      // request as a quick shot.
-      this.guestShootRequest();
+      g.guestInput.hitSeq += 1;
+      g.net.sendInput({ h: g.guestInput.hitSeq, pw: +power.toFixed(3) });
       return;
     }
-    this.shoot('player', this.charge);
+    this.shoot('player', power);
   }
 
   guestShootRequest() {
@@ -320,11 +326,11 @@ export class Hoops {
     this.shoot('player', 0.7);
   }
 
-  guestShoot() {
+  guestShoot(power) {
     // Host received a shot request from the guest.
     if (this.g.phase !== 'rally' || this.possession !== 'rival') return;
     if (this.g.ball.mode !== 'held' || this.shot) return;
-    this.shoot('rival', 0.7);
+    this.shoot('rival', power != null ? power : this.greenZone().center);
   }
 
   /* ── shooting ── */
@@ -336,43 +342,62 @@ export class Hoops {
     return 'THREE';
   }
 
-  shoot(who, charge) {
+  shoot(who, power) {
     const g = this.g;
     const a = who === 'player' ? g.player.pos : g.rival.pos;
-    const dist = Math.hypot(a.x - HOOPS.rimCenter.x, a.z - HOOPS.rimCenter.z);
-    const type = this.shotTypeFor(dist);
-    const points = dist >= HOOPS.threeR ? 3 : 2;
+    const distHoop = Math.hypot(a.x - HOOPS.rimCenter.x, a.z - HOOPS.rimCenter.z);
+    const points = distHoop >= HOOPS.threeR ? 3 : 2;
+    const type = this.shotTypeFor(distHoop);
 
-    // Quality: sweet-spot charge window, contested by the defender's proximity.
-    const sweet = 1 - Math.abs(charge - 0.72) * 1.5;
-    let quality = clamp(sweet, 0.15, 1);
-    if (type === 'DUNK') quality = Math.max(quality, 0.85);
-    const defender = who === 'player' ? g.rival.pos : g.player.pos;
-    const dDef = Math.hypot(defender.x - a.x, defender.z - a.z);
-    if (dDef < 1.5 && type !== 'DUNK') quality -= (1.5 - dDef) * 0.3;
+    // AIM-BASED shooting, TPBC-style. Crosshair = direction; power gauge =
+    // how far the ball carries. Green release + crosshair on the rim = swish.
+    let aimYaw, aimPitch;
+    if (who === 'player' && g.netMode !== 'guest') {
+      aimYaw = g.aimYaw;
+      aimPitch = g.aimPitch;
+    } else {
+      aimYaw = Math.atan2(HOOPS.rimCenter.x - a.x, -(HOOPS.rimCenter.z - a.z));
+      aimPitch = -0.11;
+    }
+    const aimHoriz = new THREE.Vector3(Math.sin(aimYaw), 0, -Math.cos(aimYaw));
 
-    // Target: rim centre + error that shrinks with quality.
-    const err = (1 - quality) * (type === 'THREE' ? 1.35 : 1.05);
-    const tx = HOOPS.rimCenter.x + (g.rng.gauss(0, err * 0.42));
-    const tzDist = g.rng.gauss(0, err * 0.6);
+    // Green release targets the rim centre exactly; off-power stretches or
+    // shortens the target along the aim ray (long / short shots).
+    const gz = this.greenZone();
+    const mult = clamp(power / gz.center, 0.3, 1.6);
+    const overshoot = distHoop * (mult - 1) * 1.7;
+    const target = new THREE.Vector3(
+      HOOPS.rimCenter.x + aimHoriz.x * overshoot,
+      HOOPS.rimCenter.y,
+      HOOPS.rimCenter.z + aimHoriz.z * overshoot
+    );
 
     const origin = this.holdPos(who);
-    const target = new THREE.Vector3(
-      tx,
-      HOOPS.rimCenter.y,
-      HOOPS.rimCenter.z + tzDist
-    );
-    const flat = Math.hypot(target.x - origin.x, target.z - origin.z);
-    // A deliberately high arc: the ball must clear the front rim tube and
-    // drop through at a steep angle (real shot geometry, not a flat throw).
-    const t = clamp(0.95 + flat * 0.085, 1.05, 1.6);
+    origin.y = 1.42; // release above the head
+
+    const toT = new THREE.Vector3(target.x - origin.x, 0, target.z - origin.z);
+    const flat = toT.length();
+    toT.divideScalar(flat || 1);
+    // Distance-tuned launch angle: steep touch shots up close, flarser
+    // threes from deep — so the solver stays stable at every range.
+    const baseAngle = clamp(62 - distHoop * 2.2, 38, 58);
+    const angle = (baseAngle * Math.PI) / 180 - clamp(aimPitch, -0.25, 0.25) * 0.5;
+    const dy = HOOPS.rimCenter.y - origin.y;
+    const denom = flat * Math.tan(angle) - dy;
+    let speed = denom > 0.3
+      ? Math.sqrt((HOOPS.gravity * flat * flat) / (2 * Math.pow(Math.cos(angle), 2) * denom))
+      : 13;
+    speed *= 1.012;
+
     const vel = new THREE.Vector3(
-      (target.x - origin.x) / t,
-      (target.y - origin.y + 0.5 * HOOPS.gravity * t * t) / t,
-      (target.z - origin.z) / t
-    );
-    // Dunks use the same solved arc; the dunk flag lets the ball power
-    // through the rim tube without clanking out (slam force).
+      toT.x * Math.cos(angle),
+      Math.sin(angle),
+      toT.z * Math.cos(angle)
+    ).multiplyScalar(speed);
+
+    const defender = who === 'player' ? g.rival.pos : g.player.pos;
+    const dDef = Math.hypot(defender.x - a.x, defender.z - a.z);
+    const quality = clamp(1 - (Math.abs(power - gz.center) / gz.width) * 0.5 - (dDef < 1.5 ? 0.28 : 0), 0.1, 1);
 
     const b = g.ball;
     b.pos.copy(origin);
@@ -381,7 +406,7 @@ export class Hoops {
     b.bounces = 0;
     b.lastHitter = who;
     b.shotType = 'drive';
-    this.shot = { who, points, type, quality, scored: false, contested: dDef < 1.5, dunk: type === 'DUNK' };
+    this.shot = { who, points, type, quality, scored: false, contested: dDef < 1.5 };
     this.possession = null;
     this.shotClock = HOOPS.shotClock;
 
@@ -389,11 +414,14 @@ export class Hoops {
     charA.triggerSwing(type === 'DUNK' ? 'smash' : 'drive', 'forehand');
     g.audio.playSwing(type === 'DUNK' ? 'smash' : 'drive');
     g.ui.setAim({ shot: type, hand: '', ready: false, readiness: 0 });
-    g.ui.setPrompt(type === 'THREE' ? 'FOR THREE…' : type === 'DUNK' ? 'SLAM!' : 'SHOOT!');
+    const inGreen = Math.abs(power - gz.center) <= gz.width / 2;
+    g.ui.setPrompt(inGreen ? 'GREEN RELEASE!' : mult > 1 ? 'TOO STRONG' : 'SHORT…');
     if (g.netMode === 'host') {
       g.pushNetEvent({ ev: 'sw', ty: type, hd: '' });
     }
   }
+
+
 
   /* ── scoring & possession ── */
 
@@ -607,7 +635,9 @@ export class Hoops {
     const dyR = b.pos.y - rim.y;
     const dFlat = Math.hypot(dxR, dzR);
     const contact = HOOPS.ballR + 0.02;      // ball + tube radius
-    const skipTube = this.shot && this.shot.dunk && !this.shot.scored;
+    const skipTube = (this.shot && this.shot.dunk && !this.shot.scored)
+      // Descending inside the ring: the net takes it — no front-rim clank.
+      || (dFlat < HOOPS.rimR * 0.8 && b.vel.y < -1);
     if (dFlat > 0.01 && !skipTube) {
       const hOff = dFlat - HOOPS.rimR;        // horizontal offset from tube centre
       const dist3 = Math.hypot(hOff, dyR);    // 3D distance to the tube centre-line
@@ -640,7 +670,7 @@ export class Hoops {
     if (
       this.shot && !this.shot.scored &&
       this.prevBallY > HOOPS.rimCenter.y && b.pos.y <= HOOPS.rimCenter.y &&
-      b.vel.y < 0 && dFlat < HOOPS.rimR * (this.shot.dunk ? 1.12 : 0.82)
+      b.vel.y < 0 && dFlat < HOOPS.rimR * (this.shot.dunk ? 0.95 : 0.6)
     ) {
       this.shot.scored = true;
       this.scoreBasket(this.shot.who);
@@ -688,6 +718,13 @@ export class Hoops {
     // Ball flying far away: safety reset (rare).
     if (b.pos.y < -3 || Math.abs(b.pos.x) > 30 || Math.abs(b.pos.z) > 40) {
       this.turnover('player', 'BALL RESET');
+      return;
+    }
+
+    // Out of bounds: nearest athlete inbounds it (their possession).
+    if (b.pos.y < 1.2 && (Math.abs(b.pos.x) > 8.4 || b.pos.z < HOOPS.bounds.zMin - 0.6 || b.pos.z > HOOPS.bounds.zMax + 0.6)) {
+      const toPlayer = g.player.pos.distanceTo(b.pos) <= g.rival.pos.distanceTo(b.pos);
+      this.turnover(toPlayer ? 'player' : 'rival', 'OUT OF BOUNDS');
       return;
     }
 
@@ -752,9 +789,13 @@ export class Hoops {
         this.guestShoot();
       }
 
-      // Charging.
+      // Charging: gauge fills; green zone marks the ideal release.
       if (this.charging) {
-        this.charge = clamp(this.charge + dt / 0.85, 0, 1);
+        this.charge = clamp(this.charge + dt / 0.95, 0, 1);
+        const gz = this.greenZone();
+        g.ui.setPowerGauge(this.charge, gz.center, gz.width);
+      } else {
+        g.ui.setPowerGauge(-1);
       }
 
       this.ballPhysics(dt);
@@ -769,16 +810,25 @@ export class Hoops {
       const dist = Math.hypot(a.x - HOOPS.rimCenter.x, a.z - HOOPS.rimCenter.z);
       const type = this.shotTypeFor(dist);
       const hasBall = this.possession === 'player' && g.ball.mode === 'held';
+      const gz = this.greenZone();
+      const inGreen = this.charging && Math.abs(this.charge - gz.center) <= gz.width / 2;
       g.ui.setAim({
         shot: hasBall ? type : 'DEFEND',
         hand: hasBall ? (dist >= HOOPS.threeR ? '· 3 PTS' : '· 2 PTS') : '',
-        ready: this.charging && this.charge > 0.55,
+        ready: inGreen,
         readiness: this.charging ? this.charge : (hasBall ? 0.35 : 0),
       });
       if (!g.ui.el.prompt.textContent || g.ui.el.prompt.textContent === 'GET READY') {
         g.ui.setPrompt(hasBall ? 'HOLD CLICK TO CHARGE · RELEASE TO SHOOT' : 'DEFEND YOUR BASKET');
       }
-      if (this.charging) g.ui.setPrompt(this.charge > 0.95 ? 'TOO STRONG — RELEASE!' : 'CHARGING…', this.charge > 0.55 ? 'ready' : 'neutral');
+      if (this.charging) {
+        const gz2 = this.greenZone();
+        const inG = Math.abs(this.charge - gz2.center) <= gz2.width / 2;
+        g.ui.setPrompt(
+          this.charge > 0.97 ? 'MAX POWER — RELEASE!' : inG ? 'GREEN — RELEASE NOW!' : 'CHARGING…',
+          inG ? 'ready' : 'neutral'
+        );
+      }
     } else if (g.phase === 'point') {
       g.updatePoint(dt);
     } else if (g.phase === 'over') {
@@ -884,7 +934,11 @@ export class Hoops {
       this._lastKey = key;
       g.updateScoreHud();
     }
-    if (this.charging) this.charge = clamp(this.charge + dt / 0.85, 0, 1);
+    if (this.charging) {
+      this.charge = clamp(this.charge + dt / 0.95, 0, 1);
+      const gz = this.greenZone();
+      g.ui.setPowerGauge(this.charge, gz.center, gz.width);
+    }
     if (this.charging && !this.iHaveBall()) this.charging = false;
     const iHaveBall = snap.b.l === 'rival' && snap.b.m === 'held';
     const dist = Math.hypot(g.player.pos.x - HOOPS.rimCenter.x, g.player.pos.z - HOOPS.rimCenter.z);
@@ -892,7 +946,7 @@ export class Hoops {
     g.ui.setAim({
       shot: iHaveBall ? type : 'DEFEND',
       hand: iHaveBall ? (dist >= HOOPS.threeR ? '· 3 PTS' : '· 2 PTS') : '',
-      ready: this.charging && this.charge > 0.55,
+      ready: this.charging && Math.abs(this.charge - this.greenZone().center) <= this.greenZone().width / 2,
       readiness: this.charging ? this.charge : (iHaveBall ? 0.35 : 0),
     });
 

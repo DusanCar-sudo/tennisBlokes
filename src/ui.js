@@ -46,6 +46,10 @@ export class UI {
       autoShot: $('auto-shot'),
       autoHand: $('auto-hand'),
       prompt: $('prompt'),
+      powerGauge: $('power-gauge'),
+      powerFill: $('power-fill'),
+      powerGreen: $('power-green'),
+      powerMark: $('power-mark'),
       hitFeedback: $('hit-feedback'),
       hitRating: $('hit-rating'),
       hitDetail: $('hit-detail'),
@@ -409,6 +413,24 @@ export class UI {
       this.el.readinessRing.style.strokeDashoffset = String(offset);
     }
     this.el.hitButton?.classList.toggle('is-ready', ready);
+  }
+
+  setPowerGauge(level, greenCenter = 0.7, greenWidth = 0.13) {
+    const gauge = this.el.powerGauge;
+    if (!gauge) return;
+    if (level == null || level < 0) {
+      gauge.setAttribute('hidden', '');
+      return;
+    }
+    gauge.removeAttribute('hidden');
+    if (this.el.powerGreen) {
+      this.el.powerGreen.style.left = `${(greenCenter - greenWidth / 2) * 100}%`;
+      this.el.powerGreen.style.width = `${greenWidth * 100}%`;
+    }
+    if (this.el.powerMark) {
+      this.el.powerMark.style.left = `${Math.min(level, 1) * 100}%`;
+      this.el.powerMark.classList.toggle('in-green', Math.abs(level - greenCenter) <= greenWidth / 2);
+    }
   }
 
   setPrompt(text, tone = 'neutral') {
