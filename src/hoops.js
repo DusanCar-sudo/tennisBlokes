@@ -247,6 +247,8 @@ export class Hoops {
     g.rival.pos.set(2.4, 0, 9.2);
     g.rival.vel.set(0, 0, 0);
     this.possession = offense;
+    this.mustClear = false;
+    this.dribbleHold = 0;
     this.shotClock = HOOPS.shotClock;
     this.shot = null;
     this.charge = 0;
@@ -431,8 +433,18 @@ export class Hoops {
 
   /* ── scoring & possession ── */
 
+  // 1v1 rule: after a steal or defensive rebound the new offense must take
+  // the ball back beyond the arc before scoring.
+  needsClear() {
+    return this.mustClear && this.possession != null;
+  }
+
   scoreBasket(who) {
     const g = this.g;
+    if (this.mustClear) {
+      this.turnover(who === 'player' ? 'rival' : 'player', 'TAKE IT BACK!');
+      return;
+    }
     const shot = this.shot;
     const pts = shot.points;
     this.lastScorer = who;
@@ -707,12 +719,19 @@ export class Hoops {
         const d = Math.hypot(a.x - b.pos.x, a.z - b.pos.z);
         if (d < 1.3 && b.pos.y < 1.75) {
           if (this.shot && !this.shot.scored) {
-            // Missed shot recovered — possession to the rebounder.
             this.streak = 0;
             g.rally = 0;
+            const offenseBefore = this.lastScorer || 'player';
             this.shot = null;
-            this.resetPositions(who);
-            g.ui.setPrompt(who === 'player' ? 'REBOUND DUKA' : 'REBOUND LAKI');
+            if (who !== offenseBefore) {
+              // Defensive board: take it back beyond the arc.
+              this.resetPositions(who);
+              this.mustClear = true;
+              g.ui.setPrompt('REBOUND — TAKE IT BACK');
+            } else {
+              this.resetPositions(who);
+              g.ui.setPrompt(who === 'player' ? 'REBOUND DUKA' : 'REBOUND LAKI');
+            }
             return;
           }
           this.shot = null;
@@ -794,6 +813,26 @@ export class Hoops {
       if (g.netMode === 'host' && g.guestInput.hitSeq > this.guestLastHit) {
         this.guestLastHit = g.guestInput.hitSeq;
         this.guestShoot();
+      }
+
+      // Take-back: carrier must move beyond the arc to clear.
+      if (this.mustClear && this.possession) {
+        const c = this.carrierPos();
+        if (Math.hypot(c.x - HOOPS.rimCenter.x, c.z - HOOPS.rimCenter.z) > HOOPS.threeR + 0.4) {
+          this.mustClear = false;
+          g.ui.setPrompt('CLEARED — ATTACK!');
+        }
+      }
+
+      // Traveling: sprinting with the ball unpumped is a violation.
+      if (this.possession && g.ball.mode === 'held') {
+        const carrier = this.possession === 'player' ? g.player : g.rival;
+        const fast = carrier.vel.length() > TUNING.playerSpeed * 1.06;
+        this.dribbleHold = fast ? this.dribbleHold + dt : 0;
+        if (this.dribbleHold > 1.15) {
+          this.dribbleHold = 0;
+          this.turnover(this.possession, 'TRAVELING');
+        }
       }
 
       // Charging: gauge fills; green zone marks the ideal release.
