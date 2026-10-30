@@ -199,37 +199,74 @@ export class AudioEngine {
 
   playSwing(type = 'forehand') {
     if (!this.ctx || !this.soundEnabled) return;
-    const frequency = type === 'smash' ? 1800 : type === 'serve' ? 1500 : 1100;
-    this._startBufferNoise(0.13, 'bandpass', frequency, 0.035);
+    const freqMap = { smash: 2200, serve: 1700, drive: 1400, topspin: 1100, slice: 900, volley: 1300, lob: 800, drop: 750 };
+    const frequency = freqMap[type] || 1100;
+    const dur = type === 'smash' ? 0.16 : type === 'slice' ? 0.18 : 0.13;
+    this._startBufferNoise(dur, 'bandpass', frequency, 0.04);
+    // Add a subtle whoosh tone for heavier swings
+    if (type === 'smash' || type === 'serve' || type === 'drive') {
+      this._tone(frequency * 0.4, 0.08, 0.015, 'sawtooth');
+    }
   }
 
   playHit(type = 'topspin', quality = 0.75, pan = 0) {
     if (!this.ctx || !this.soundEnabled) return;
-    const heavy = type === 'smash' || type === 'serve';
-    const base = heavy ? 105 : type === 'slice' ? 175 : 145;
-    const noiseFreq = heavy ? 2600 : type === 'slice' ? 1500 : 1900;
-    const volume = heavy ? 0.32 : 0.22;
-    this._startBufferNoise(heavy ? 0.11 : 0.08, 'bandpass', noiseFreq, volume * (0.7 + quality * 0.45), pan);
+    // Each shot type has a distinct timbral fingerprint so players can
+    // audibly identify the stroke without looking at the HUD.
+    const profiles = {
+      smash:   { base: 88,  noiseFreq: 3200, noiseDur: 0.14, vol: 0.38, q: 1.8, sub: true,  harm: [2.4, 3.1] },
+      drive:   { base: 120, noiseFreq: 2400, noiseDur: 0.09, vol: 0.30, q: 1.2, sub: false, harm: [2.0] },
+      topspin: { base: 145, noiseFreq: 1900, noiseDur: 0.08, vol: 0.24, q: 0.9, sub: false, harm: [1.8] },
+      slice:   { base: 195, noiseFreq: 1400, noiseDur: 0.12, vol: 0.20, q: 2.2, sub: false, harm: [2.6, 3.8] },
+      volley:  { base: 160, noiseFreq: 2100, noiseDur: 0.06, vol: 0.26, q: 1.0, sub: false, harm: [1.5] },
+      lob:     { base: 110, noiseFreq: 1100, noiseDur: 0.15, vol: 0.18, q: 0.6, sub: true,  harm: [1.3] },
+      drop:    { base: 220, noiseFreq: 900,  noiseDur: 0.10, vol: 0.16, q: 1.5, sub: false, harm: [2.2, 4.0] },
+      serve:   { base: 95,  noiseFreq: 2800, noiseDur: 0.12, vol: 0.35, q: 1.6, sub: true,  harm: [2.1, 2.8] },
+    };
+    const pr = profiles[type] || profiles.topspin;
+    const vol = pr.vol * (0.7 + quality * 0.45);
+
+    // Noise burst — filtered differently per shot type
+    this._startBufferNoise(pr.noiseDur, 'bandpass', pr.noiseFreq, vol, pan);
+
+    // Primary tone with pitch envelope
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     const panNode = this.ctx.createStereoPanner();
     panNode.pan.value = clamp(pan, -1, 1);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(base * 2.1, now);
-    osc.frequency.exponentialRampToValueAtTime(base, now + 0.055);
-    osc.frequency.exponentialRampToValueAtTime(base * 0.6, now + 0.15);
+    osc.type = pr.sub ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(pr.base * 2.1, now);
+    osc.frequency.exponentialRampToValueAtTime(pr.base, now + 0.055);
+    osc.frequency.exponentialRampToValueAtTime(pr.base * 0.55, now + 0.16);
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.linearRampToValueAtTime(0.22 * (0.8 + quality * 0.4), now + 0.004);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.17);
     osc.connect(gain);
     gain.connect(panNode);
     panNode.connect(this.sfx);
     osc.start(now);
-    osc.stop(now + 0.18);
+    osc.stop(now + 0.19);
 
-    if (heavy) {
-      this._startBufferNoise(0.18, 'lowpass', 420, 0.09, pan);
+    // Harmonic overtones — give each shot its "color"
+    for (const h of pr.harm) {
+      const ho = this.ctx.createOscillator();
+      const hg = this.ctx.createGain();
+      ho.type = 'sine';
+      ho.frequency.setValueAtTime(pr.base * h, now);
+      ho.frequency.exponentialRampToValueAtTime(pr.base * h * 0.7, now + 0.12);
+      hg.gain.setValueAtTime(0.0001, now);
+      hg.gain.linearRampToValueAtTime(0.06 * quality, now + 0.006);
+      hg.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+      ho.connect(hg);
+      hg.connect(panNode);
+      ho.start(now);
+      ho.stop(now + 0.15);
+    }
+
+    // Sub-bass thud for heavy shots
+    if (pr.sub) {
+      this._startBufferNoise(0.18, 'lowpass', 380, 0.1, pan);
     }
   }
 
@@ -287,6 +324,18 @@ export class AudioEngine {
     if (!this.ctx || !this.soundEnabled) return;
     this._tone(final ? 880 : 560, final ? 0.3 : 0.12, 0.07, 'triangle');
     if (final) this._tone(1320, 0.34, 0.035, 'sine', 0.05);
+  }
+
+  // P1-6: Rally tension modulates crowd volume — longer rallies = louder murmur.
+  setRallyTension(rallyCount) {
+    if (!this.ctx || !this.soundEnabled || !this.crowdGain) return;
+    const now = this.ctx.currentTime;
+    const base = 0.035;
+    const tension = Math.min(rallyCount / 20, 1) * 0.06;
+    const gain = this.crowdGain.gain;
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(gain.value, now);
+    gain.linearRampToValueAtTime(base + tension, now + 0.3);
   }
 
   cheer(strength = 1) {

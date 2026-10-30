@@ -3312,3 +3312,41 @@ body.is-replay .hud-bottom { opacity: 1; }
   opacity: 0.4;
   cursor: default;
 }
+
+
+/* ── P0-3: Reticle snap pulse when readiness crosses threshold ── */
+.reticle.is-ready .reticle-ring .ring-fill {
+  animation: reticlePulse 0.15s ease-out;
+}
+
+@keyframes reticlePulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.reticle.is-ready .reticle-dot {
+  animation: dotSnap 0.12s ease-out;
+}
+
+@keyframes dotSnap {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  40% { transform: translate(-50%, -50%) scale(2.2); background: var(--mint); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Screen flash on perfect hit */
+body.perfect-flash::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: radial-gradient(circle at center, rgba(91, 231, 199, 0.15), transparent 60%);
+  pointer-events: none;
+  animation: perfectFlash 0.25s ease-out forwards;
+}
+
+@keyframes perfectFlash {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}

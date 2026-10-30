@@ -1031,6 +1031,7 @@ class SunsetSlam {
     this.rally = 0;
     this.longestRally = 0;
     this.stats = { pointsWon: 0, topSpeed: 0, perfects: 0, winners: 0, autoShots: 0, totalPoints: 0 };
+    this._aiAdapt = { playerWins: 0, totalPoints: 0, hotHand: 0 };
     this.resultsShown = false;
     this.endTimer = 0;
     this.serve = { state: 'idle', timer: 0, tossStarted: false, quickServe: 0 };
@@ -1543,10 +1544,14 @@ class SunsetSlam {
     const target = this.applyAutoTarget(shot.type, this.aimPoint.clone());
 
     const pressure = clamp(this.player.vel.length() / 6, 0, 1);
-    // Long rallies wear on timing: a small fatigue term keeps marathon
-    // exchanges from becoming literally endless against perfect movement.
     const fatigue = clamp(this.rally / 110, 0, 0.18);
-    const errorScale = (1 - quality) * 1.35 + pressure * 0.22 + fatigue;
+    // ── Adaptive difficulty (rubber-banding) ──
+    if (!this._aiAdapt) this._aiAdapt = { playerWins: 0, totalPoints: 0, hotHand: 0 };
+    const adapt = this._aiAdapt;
+    const winRate = adapt.totalPoints > 3 ? adapt.playerWins / adapt.totalPoints : 0.5;
+    const difficultyMod = clamp((winRate - 0.5) * 0.4, -0.15, 0.15);
+    const hotFactor = clamp(adapt.hotHand * 0.03, -0.1, 0.1);
+    const errorScale = (1 - quality) * 1.35 + pressure * 0.22 + fatigue - difficultyMod - hotFactor;
     let missed = false;
     if (this.rng.chance(clamp(fatigue * 0.35 + (1 - quality) * 0.06, 0, 0.22))) {
       missed = true;
@@ -1581,6 +1586,12 @@ class SunsetSlam {
     const pan = clamp((origin.x - this.player.pos.x) / 4, -0.7, 0.7);
     this.audio.playHit(shot.type, quality, pan);
     this.effects.spawnContact(origin, SHOTS[shot.type]?.color ?? 0xffd36e, quality);
+    // P0-3: Perfect timing snap — haptic + visual flash
+    if (quality > 0.82) {
+      navigator.vibrate?.(25);
+      document.body.classList.add('perfect-flash');
+      setTimeout(() => document.body.classList.remove('perfect-flash'), 280);
+    }
 
     this.rally += 1;
     this.longestRally = Math.max(this.longestRally, this.rally);
@@ -1599,6 +1610,7 @@ class SunsetSlam {
     this.rival.reactionTimer = 0.1 + this.rng.range(0, 0.1);
     this.rival.lastTarget.copy(this.rival.pos);
     this.ui.setRally(this.rally);
+    this.audio.setRallyTension(this.rally);
     this.ui.setTopSpeed(formatSpeed(this.stats.topSpeed));
     this.ui.showHitFeedback({
       rating,
@@ -1748,6 +1760,14 @@ class SunsetSlam {
     else if (rival.pos.z > -4.7 && height > 0.35) type = 'volley';
     else if (height < 0.4) type = 'slice';
     else if (this.player.pos.z > 8.5 && height < 1.0 && this.rng.chance(0.15)) type = 'drop';
+    // Tactical shot variety based on player position + rally length
+    if (this.player.pos.z > 9.5 && this.rng.chance(0.2)) type = 'drop';
+    else if (this.player.pos.z < 3.5 && this.rng.chance(0.25)) type = 'lob';
+    else if (this.rally > 6 && this.rng.chance(0.14)) type = 'slice';
+    // Shot variety: tactical overrides based on player position + rally length
+    if (this.player.pos.z > 9.5 && this.rng.chance(0.2)) type = 'drop';
+    else if (this.player.pos.z < 3.5 && this.rng.chance(0.25)) type = 'lob';
+    else if (this.rally > 6 && this.rng.chance(0.14)) type = 'slice';
 
     const openSide = this.player.pos.x > 0.35 ? -1 : this.player.pos.x < -0.35 ? 1 : this.rng.sign();
     let targetX = openSide * this.rng.range(1.4, 3.35);
@@ -2404,9 +2424,12 @@ class SunsetSlam {
       this.score.player += 1;
       this.stats.pointsWon += 1;
       if (reason === 'WINNER') this.stats.winners += 1;
+      if (this._aiAdapt) { this._aiAdapt.playerWins += 1; this._aiAdapt.hotHand = Math.max(-5, this._aiAdapt.hotHand - 1); }
     } else {
       this.score.rival += 1;
+      if (this._aiAdapt) { this._aiAdapt.hotHand = Math.min(5, this._aiAdapt.hotHand + 1); }
     }
+    if (this._aiAdapt) this._aiAdapt.totalPoints += 1;
     this.totalPoints += 1;
     this.stats.totalPoints = this.totalPoints;
     const playerWon = winner === 'player';
@@ -2593,9 +2616,14 @@ class SunsetSlam {
     const shoulder = (focus ? 0.74 : TUNING.cameraShoulder) + (portrait ? -0.18 : 0);
     const forward = new THREE.Vector3(Math.sin(this.aimYaw), 0, -Math.cos(this.aimYaw));
     const right = new THREE.Vector3(Math.cos(this.aimYaw), 0, Math.sin(this.aimYaw));
+    // P1-4: Blend ball lateral position into camera when opponent just hit.
+    let ballBlendX = 0;
+    if (this.ball.lastHitter === 'rival' && this.ball.mode === 'flight' && this.phase === 'rally') {
+      ballBlendX = (this.ball.pos.x - this.player.pos.x) * 0.18;
+    }
     return new THREE.Vector3()
       .copy(this.player.pos)
-      .add(new THREE.Vector3(0, height, 0))
+      .add(new THREE.Vector3(ballBlendX, height, 0))
       .addScaledVector(forward, -dist)
       .addScaledVector(right, shoulder);
   }

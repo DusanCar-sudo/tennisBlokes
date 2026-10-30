@@ -655,7 +655,7 @@ export class Hoops {
     const contact = HOOPS.ballR + 0.02;      // ball + tube radius
     const skipTube = (this.shot && this.shot.dunk && !this.shot.scored)
       // Descending inside the ring: the net takes it — no front-rim clank.
-      || (dFlat < HOOPS.rimR * 0.8 && b.vel.y < -1);
+      || (dFlat < HOOPS.rimR * 1.05 && b.vel.y < -1.2);
     if (dFlat > 0.01 && !skipTube) {
       const hOff = dFlat - HOOPS.rimR;        // horizontal offset from tube centre
       const dist3 = Math.hypot(hOff, dyR);    // 3D distance to the tube centre-line
