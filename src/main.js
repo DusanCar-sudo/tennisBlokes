@@ -3250,7 +3250,7 @@ class SunsetSlam {
       this.introTimer = 1.25;
       if (this.sport === 'basket') {
         this.aimYaw = 0;
-        this.aimPitch = 0.3;   // eyes up on the rim
+        this.aimPitch = 0.38;   // eyes up on the rim (3m high, ~14m away)
       } else {
         this.aimYaw = -0.05;
         this.aimPitch = -0.11;

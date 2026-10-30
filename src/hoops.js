@@ -242,9 +242,10 @@ export class Hoops {
 
   resetPositions(offense) {
     const g = this.g;
-    g.player.pos.set(-2.4, 0, 9.6);
+    // Check-ball position: top of the key area
+    g.player.pos.set(-1.5, 0, 2.0);
     g.player.vel.set(0, 0, 0);
-    g.rival.pos.set(2.4, 0, 9.2);
+    g.rival.pos.set(1.5, 0, 0.5);
     g.rival.vel.set(0, 0, 0);
     this.possession = offense;
     this.mustClear = false;
@@ -562,12 +563,13 @@ export class Hoops {
         this.cpuInput.z = 0;
       }
     } else if (this.possession === 'player') {
-      // Defense: sit on the line between the ball-handler and the hoop.
+      // Defense: sit between the ball-handler and the hoop.
       const dx = hoop.x - foe.x;
       const dz = hoop.z - foe.z;
       const len = Math.hypot(dx, dz) || 1;
-      const guardX = foe.x + (dx / len) * 1.35;
-      const guardZ = foe.z + (dz / len) * 1.35;
+      const guardDist = clamp(len * 0.35, 1.2, 3.5);
+      const guardX = foe.x + (dx / len) * guardDist;
+      const guardZ = foe.z + (dz / len) * guardDist;
       const mx = guardX - me.x;
       const mz = guardZ - me.z;
       const mlen = Math.hypot(mx, mz) || 1;
